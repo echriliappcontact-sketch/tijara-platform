@@ -13,13 +13,14 @@ import { PublicModule } from "./modules/public/public.module";
 import { TrackingModule } from "./modules/tracking/tracking.module";
 import { UploadsModule } from "./modules/uploads/uploads.module";
 import { AnalyticsModule } from "./modules/analytics/analytics.module";
+import { SubscriptionsModule } from "./modules/subscriptions/subscriptions.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule, AuthModule, StoresModule, ProductsModule, OrdersModule,
     UsersModule, WilayasModule, AdminModule, CouriersModule, PublicModule,
-    TrackingModule, UploadsModule, AnalyticsModule,
+    TrackingModule, UploadsModule, AnalyticsModule, SubscriptionsModule,
   ],
 })
 export class AppModule {}

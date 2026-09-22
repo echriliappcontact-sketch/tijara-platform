@@ -2,13 +2,12 @@
 CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "email" TEXT NOT NULL,
-    "phone" TEXT,
     "passwordHash" TEXT NOT NULL,
     "firstName" TEXT,
     "lastName" TEXT,
+    "phone" TEXT,
     "avatar" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "lastLoginAt" DATETIME,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
 );
@@ -18,7 +17,6 @@ CREATE TABLE "Role" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "displayName" TEXT NOT NULL,
-    "description" TEXT,
     "isSystem" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -36,17 +34,6 @@ CREATE TABLE "UserRole" (
 );
 
 -- CreateTable
-CREATE TABLE "RefreshToken" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "userId" TEXT NOT NULL,
-    "token" TEXT NOT NULL,
-    "expiresAt" DATETIME NOT NULL,
-    "revokedAt" DATETIME,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
 CREATE TABLE "stores" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "ownerId" TEXT NOT NULL,
@@ -59,10 +46,9 @@ CREATE TABLE "stores" (
     "whatsapp" TEXT,
     "currency" TEXT NOT NULL DEFAULT 'DZD',
     "defaultLanguage" TEXT NOT NULL DEFAULT 'ar',
-    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "status" TEXT NOT NULL DEFAULT 'TRIAL',
     "isPublished" BOOLEAN NOT NULL DEFAULT false,
     "trialEndsAt" DATETIME,
-    "subscriptionId" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "stores_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
@@ -74,7 +60,6 @@ CREATE TABLE "StoreSettings" (
     "storeId" TEXT NOT NULL,
     "metaTitle" TEXT,
     "metaDescription" TEXT,
-    "themeConfig" TEXT,
     "enableCod" BOOLEAN NOT NULL DEFAULT true,
     "enableHomeDelivery" BOOLEAN NOT NULL DEFAULT true,
     "enableStopDesk" BOOLEAN NOT NULL DEFAULT true,
@@ -84,24 +69,12 @@ CREATE TABLE "StoreSettings" (
 );
 
 -- CreateTable
-CREATE TABLE "Theme" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "description" TEXT,
-    "config" TEXT NOT NULL DEFAULT '{}',
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- CreateTable
 CREATE TABLE "Category" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "storeId" TEXT NOT NULL,
     "parentId" TEXT,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
-    "description" TEXT,
     "image" TEXT,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
@@ -117,18 +90,14 @@ CREATE TABLE "Product" (
     "categoryId" TEXT,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
-    "shortDescription" TEXT,
     "description" TEXT,
     "price" REAL NOT NULL,
     "compareAtPrice" REAL,
-    "costPrice" REAL,
     "sku" TEXT,
     "stock" INTEGER NOT NULL DEFAULT 0,
     "status" TEXT NOT NULL DEFAULT 'DRAFT',
     "isFeatured" BOOLEAN NOT NULL DEFAULT false,
     "tags" TEXT NOT NULL DEFAULT '[]',
-    "viewsCount" INTEGER NOT NULL DEFAULT 0,
-    "salesCount" INTEGER NOT NULL DEFAULT 0,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "Product_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "stores" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -166,6 +135,8 @@ CREATE TABLE "Customer" (
     "lastName" TEXT,
     "email" TEXT,
     "phone" TEXT NOT NULL,
+    "address" TEXT,
+    "wilayaCode" TEXT,
     "ordersCount" INTEGER NOT NULL DEFAULT 0,
     "totalSpent" REAL NOT NULL DEFAULT 0,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -183,7 +154,7 @@ CREATE TABLE "Order" (
     "customerPhone" TEXT NOT NULL,
     "customerEmail" TEXT,
     "wilayaCode" TEXT NOT NULL,
-    "communeCode" TEXT,
+    "commune" TEXT,
     "address" TEXT NOT NULL,
     "notes" TEXT,
     "subtotal" REAL NOT NULL,
@@ -193,8 +164,10 @@ CREATE TABLE "Order" (
     "paymentMethod" TEXT NOT NULL DEFAULT 'COD',
     "paymentStatus" TEXT NOT NULL DEFAULT 'PENDING',
     "status" TEXT NOT NULL DEFAULT 'PENDING',
-    "couponCode" TEXT,
     "deliveryType" TEXT,
+    "courierId" TEXT,
+    "trackingNumber" TEXT,
+    "couponCode" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "Order_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "stores" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -229,6 +202,71 @@ CREATE TABLE "OrderStatusHistory" (
 );
 
 -- CreateTable
+CREATE TABLE "Courier" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "Wilaya" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "code" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "nameAr" TEXT NOT NULL,
+    "nameFr" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true
+);
+
+-- CreateTable
+CREATE TABLE "Theme" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "config" TEXT NOT NULL DEFAULT '{}',
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "SubscriptionPlan" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "description" TEXT,
+    "price" REAL NOT NULL,
+    "duration" INTEGER NOT NULL,
+    "maxProducts" INTEGER,
+    "maxOrders" INTEGER,
+    "maxStaff" INTEGER NOT NULL DEFAULT 1,
+    "features" TEXT NOT NULL DEFAULT '[]',
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "isPopular" BOOLEAN NOT NULL DEFAULT false,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "SubscriptionPayment" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "storeId" TEXT NOT NULL,
+    "planId" TEXT NOT NULL,
+    "amount" REAL NOT NULL,
+    "transactionRef" TEXT NOT NULL,
+    "receiptUrl" TEXT,
+    "paymentMethod" TEXT NOT NULL DEFAULT 'BARIDIMOB',
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "adminNote" TEXT,
+    "reviewedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "SubscriptionPayment_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "stores" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "SubscriptionPayment_planId_fkey" FOREIGN KEY ("planId") REFERENCES "SubscriptionPlan" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
 CREATE TABLE "Coupon" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "storeId" TEXT NOT NULL,
@@ -246,178 +284,16 @@ CREATE TABLE "Coupon" (
 );
 
 -- CreateTable
-CREATE TABLE "Courier" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "adapterKey" TEXT NOT NULL,
-    "supportsHomeDelivery" BOOLEAN NOT NULL DEFAULT true,
-    "supportsStopDesk" BOOLEAN NOT NULL DEFAULT true,
-    "supportsCod" BOOLEAN NOT NULL DEFAULT true,
-    "supportsTracking" BOOLEAN NOT NULL DEFAULT true,
-    "supportsLabel" BOOLEAN NOT NULL DEFAULT false,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- CreateTable
-CREATE TABLE "CourierAccount" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "storeId" TEXT NOT NULL,
-    "courierId" TEXT NOT NULL,
-    "isEnabled" BOOLEAN NOT NULL DEFAULT true,
-    "credentials" TEXT NOT NULL,
-    "lastTestedAt" DATETIME,
-    "testStatus" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "CourierAccount_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "stores" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "CourierAccount_courierId_fkey" FOREIGN KEY ("courierId") REFERENCES "Courier" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "Shipment" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "storeId" TEXT NOT NULL,
-    "orderId" TEXT NOT NULL,
-    "courierId" TEXT NOT NULL,
-    "courierAccountId" TEXT NOT NULL,
-    "trackingNumber" TEXT,
-    "externalShipmentId" TEXT,
-    "deliveryType" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'CREATED',
-    "labelUrl" TEXT,
-    "shippingCost" REAL,
-    "cancelledAt" DATETIME,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "Shipment_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "stores" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "Shipment_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "Shipment_courierId_fkey" FOREIGN KEY ("courierId") REFERENCES "Courier" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "Shipment_courierAccountId_fkey" FOREIGN KEY ("courierAccountId") REFERENCES "CourierAccount" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "ShipmentEvent" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "shipmentId" TEXT NOT NULL,
-    "courierStatus" TEXT NOT NULL,
-    "courierMessage" TEXT,
-    "normalizedStatus" TEXT NOT NULL,
-    "location" TEXT,
-    "occurredAt" DATETIME NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "ShipmentEvent_shipmentId_fkey" FOREIGN KEY ("shipmentId") REFERENCES "Shipment" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "ShippingRate" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "storeId" TEXT NOT NULL,
-    "courierId" TEXT,
-    "wilayaCode" TEXT NOT NULL,
-    "deliveryType" TEXT NOT NULL,
-    "price" REAL NOT NULL,
-    "freeAbove" REAL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "ShippingRate_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "stores" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "ShippingRate_courierId_fkey" FOREIGN KEY ("courierId") REFERENCES "Courier" ("id") ON DELETE SET NULL ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "SubscriptionPlan" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "description" TEXT,
-    "price" REAL NOT NULL,
-    "duration" INTEGER NOT NULL,
-    "maxProducts" INTEGER,
-    "maxOrders" INTEGER,
-    "maxStaff" INTEGER NOT NULL DEFAULT 1,
-    "customDomain" BOOLEAN NOT NULL DEFAULT false,
-    "analytics" BOOLEAN NOT NULL DEFAULT false,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "isPopular" BOOLEAN NOT NULL DEFAULT false,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- CreateTable
-CREATE TABLE "PlanFeature" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "planId" TEXT NOT NULL,
-    "feature" TEXT NOT NULL,
-    "value" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "PlanFeature_planId_fkey" FOREIGN KEY ("planId") REFERENCES "SubscriptionPlan" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "Subscription" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "storeId" TEXT NOT NULL,
-    "planId" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'TRIALING',
-    "startsAt" DATETIME NOT NULL,
-    "endsAt" DATETIME NOT NULL,
-    "trialEndsAt" DATETIME,
-    "cancelledAt" DATETIME,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "Subscription_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "stores" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "Subscription_planId_fkey" FOREIGN KEY ("planId") REFERENCES "SubscriptionPlan" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
--- CreateTable
 CREATE TABLE "Notification" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "storeId" TEXT,
     "userId" TEXT,
-    "customerId" TEXT,
+    "storeId" TEXT,
     "type" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "message" TEXT NOT NULL,
     "data" TEXT,
-    "channel" TEXT NOT NULL DEFAULT 'in_app',
     "isRead" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "Notification_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "stores" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "Notification_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer" ("id") ON DELETE SET NULL ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "Wilaya" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "code" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "nameAr" TEXT NOT NULL,
-    "nameFr" TEXT NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true
-);
-
--- CreateTable
-CREATE TABLE "SystemSetting" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "key" TEXT NOT NULL,
-    "value" TEXT NOT NULL,
-    "group" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
-);
-
--- CreateTable
-CREATE TABLE "StoreAnalytics" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "storeId" TEXT NOT NULL,
-    "date" DATETIME NOT NULL,
-    "visitors" INTEGER NOT NULL DEFAULT 0,
-    "orders" INTEGER NOT NULL DEFAULT 0,
-    "revenue" REAL NOT NULL DEFAULT 0,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "StoreAnalytics_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "stores" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateIndex
@@ -427,19 +303,10 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "RefreshToken_token_key" ON "RefreshToken"("token");
-
--- CreateIndex
 CREATE UNIQUE INDEX "stores_slug_key" ON "stores"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "StoreSettings_storeId_key" ON "StoreSettings"("storeId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Theme_name_key" ON "Theme"("name");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Theme_slug_key" ON "Theme"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Category_storeId_slug_key" ON "Category"("storeId", "slug");
@@ -454,34 +321,22 @@ CREATE UNIQUE INDEX "Customer_storeId_phone_key" ON "Customer"("storeId", "phone
 CREATE UNIQUE INDEX "Order_storeId_orderNumber_key" ON "Order"("storeId", "orderNumber");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Coupon_storeId_code_key" ON "Coupon"("storeId", "code");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Courier_name_key" ON "Courier"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Courier_slug_key" ON "Courier"("slug");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Courier_adapterKey_key" ON "Courier"("adapterKey");
+CREATE UNIQUE INDEX "Wilaya_code_key" ON "Wilaya"("code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CourierAccount_storeId_courierId_key" ON "CourierAccount"("storeId", "courierId");
+CREATE UNIQUE INDEX "Theme_name_key" ON "Theme"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Shipment_orderId_key" ON "Shipment"("orderId");
+CREATE UNIQUE INDEX "Theme_slug_key" ON "Theme"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SubscriptionPlan_slug_key" ON "SubscriptionPlan"("slug");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Subscription_storeId_key" ON "Subscription"("storeId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Wilaya_code_key" ON "Wilaya"("code");
-
--- CreateIndex
-CREATE UNIQUE INDEX "SystemSetting_key_key" ON "SystemSetting"("key");
-
--- CreateIndex
-CREATE UNIQUE INDEX "StoreAnalytics_storeId_date_key" ON "StoreAnalytics"("storeId", "date");
+CREATE UNIQUE INDEX "Coupon_storeId_code_key" ON "Coupon"("storeId", "code");

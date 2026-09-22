@@ -13,6 +13,8 @@ model User {
   passwordHash  String
   firstName     String?
   lastName      String?
+  phone         String?
+  avatar        String?
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -48,23 +50,31 @@ model Store {
   logo            String?
   email           String?
   phone           String?
+  whatsapp        String?
   currency        String   @default("DZD")
-  status          String   @default("PENDING")
+  defaultLanguage String   @default("ar")
+  status          String   @default("TRIAL")
   isPublished     Boolean  @default(false)
+  trialEndsAt     DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   owner           User            @relation(fields: [ownerId], references: [id])
   settings        StoreSettings?
   categories      Category[]
   products        Product[]
+  customers       Customer[]
   orders          Order[]
   userRoles       UserRole[]
+  payments        SubscriptionPayment[]
+  coupons         Coupon[]
   @@map("stores")
 }
 
 model StoreSettings {
   id                 String  @id @default(uuid())
   storeId            String  @unique
+  metaTitle          String?
+  metaDescription    String?
   enableCod          Boolean @default(true)
   enableHomeDelivery Boolean @default(true)
   enableStopDesk     Boolean @default(true)
@@ -76,6 +86,7 @@ model StoreSettings {
 model Category {
   id        String    @id @default(uuid())
   storeId   String
+  parentId  String?
   name      String
   slug      String
   image     String?
@@ -83,28 +94,33 @@ model Category {
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  parent    Category? @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
   products  Product[]
   @@unique([storeId, slug])
 }
 
 model Product {
-  id          String   @id @default(uuid())
-  storeId     String
-  categoryId  String?
-  name        String
-  slug        String
-  description String?
-  price       Float
-  sku         String?
-  stock       Int      @default(0)
-  status      String   @default("DRAFT")
-  isFeatured  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  store       Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  category    Category?      @relation(fields: [categoryId], references: [id])
-  images      ProductImage[]
-  orderItems  OrderItem[]
+  id             String   @id @default(uuid())
+  storeId        String
+  categoryId     String?
+  name           String
+  slug           String
+  description    String?
+  price          Float
+  compareAtPrice Float?
+  sku            String?
+  stock          Int      @default(0)
+  status         String   @default("DRAFT")
+  isFeatured     Boolean  @default(false)
+  tags           String   @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  store      Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  category   Category?     @relation(fields: [categoryId], references: [id])
+  images     ProductImage[]
+  variants   ProductVariant[]
+  orderItems OrderItem[]
   @@unique([storeId, slug])
 }
 
@@ -117,47 +133,100 @@ model ProductImage {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
+model ProductVariant {
+  id        String  @id @default(uuid())
+  productId String
+  sku       String?
+  options   String
+  price     Float
+  stock     Int     @default(0)
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+}
+
+model Customer {
+  id          String   @id @default(uuid())
+  storeId     String
+  firstName   String
+  lastName    String?
+  email       String?
+  phone       String
+  address     String?
+  wilayaCode  String?
+  ordersCount Int      @default(0)
+  totalSpent  Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  store  Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orders Order[]
+  @@unique([storeId, phone])
+}
+
 model Order {
-  id            String   @id @default(uuid())
-  storeId       String
-  orderNumber   String
-  customerName  String
-  customerPhone String
-  customerEmail String?
-  wilayaCode    String
-  address       String?
-  notes         String?
-  subtotal      Float
-  shippingCost  Float    @default(0)
-  total         Float
-  status        String   @default("PENDING")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  store         Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  items         OrderItem[]
+  id             String   @id @default(uuid())
+  storeId        String
+  customerId     String?
+  orderNumber    String
+  customerName   String
+  customerPhone  String
+  customerEmail  String?
+  wilayaCode     String
+  commune        String?
+  address        String
+  notes          String?
+  subtotal       Float
+  shippingCost   Float    @default(0)
+  discountAmount Float    @default(0)
+  total          Float
+  paymentMethod  String   @default("COD")
+  paymentStatus  String   @default("PENDING")
+  status         String   @default("PENDING")
+  deliveryType   String?
+  courierId      String?
+  trackingNumber String?
+  couponCode     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer     Customer?     @relation(fields: [customerId], references: [id])
+  items        OrderItem[]
+  statusHistory OrderStatusHistory[]
   @@unique([storeId, orderNumber])
 }
 
 model OrderItem {
-  id          String  @id @default(uuid())
+  id          String         @id @default(uuid())
   orderId     String
   productId   String
+  variantId   String?
   productName String
   price       Float
   quantity    Int
   total       Float
-  createdAt   DateTime @default(now())
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product @relation(fields: [productId], references: [id])
+  image       String?
+  createdAt   DateTime       @default(now())
+  order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id])
+  variant ProductVariant? @relation(fields: [variantId], references: [id])
+}
+
+model OrderStatusHistory {
+  id        String   @id @default(uuid())
+  orderId   String
+  status    String
+  note      String?
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Courier {
-  id         String   @id @default(uuid())
-  name       String   @unique
-  slug       String   @unique
-  adapterKey String   @unique
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
 }
 
 model Wilaya {
@@ -179,15 +248,65 @@ model Theme {
 }
 
 model SubscriptionPlan {
-  id          String   @id @default(uuid())
-  name        String
-  slug        String   @unique
-  price       Float
-  duration    Int
-  maxProducts Int?
-  maxOrders   Int?
-  isActive    Boolean  @default(true)
-  isPopular   Boolean  @default(false)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid())
+  name         String
+  slug         String   @unique
+  description  String?
+  price        Float
+  duration     Int
+  maxProducts  Int?
+  maxOrders    Int?
+  maxStaff     Int      @default(1)
+  features     String   @default("[]")
+  isActive     Boolean  @default(true)
+  isPopular    Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  payments     SubscriptionPayment[]
+}
+
+model SubscriptionPayment {
+  id             String    @id @default(uuid())
+  storeId        String
+  planId         String
+  amount         Float
+  transactionRef String
+  receiptUrl     String?
+  paymentMethod  String    @default("BARIDIMOB")
+  status         String    @default("PENDING")
+  adminNote      String?
+  reviewedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  store Store            @relation(fields: [storeId], references: [id])
+  plan  SubscriptionPlan @relation(fields: [planId], references: [id])
+}
+
+model Coupon {
+  id             String    @id @default(uuid())
+  storeId        String
+  code           String
+  type           String
+  value          Float
+  minOrderAmount Float?
+  maxUses        Int?
+  usedCount      Int       @default(0)
+  startsAt       DateTime?
+  expiresAt      DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  store          Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  @@unique([storeId, code])
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String?
+  storeId   String?
+  type      String
+  title     String
+  message   String
+  data      String?
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
 }

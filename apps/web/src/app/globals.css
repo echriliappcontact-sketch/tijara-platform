@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --accent: #10b981;
+  --accent2: #059669;
+  --text: #f0f0f0;
+  --muted: #888;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Tajawal", system-ui, -apple-system, sans-serif;
+}
+
+html[dir="rtl"] {
+  font-family: "Tajawal", system-ui, -apple-system, sans-serif;
+}
+
+html[dir="ltr"] {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+.btn-primary:hover {
+  background: var(--accent2);
+  letter-spacing: 0.02em;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 24px;
+  transition: border-color 0.2s;
+}
+.card:hover {
+  border-color: #333;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+table th {
+  font-weight: 600;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+  animation: fadeIn 0.4s ease forwards;
+}
