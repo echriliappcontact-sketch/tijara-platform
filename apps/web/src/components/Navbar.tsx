@@ -48,7 +48,7 @@ export default function Navbar() {
               {languages.find(l => l.code === lang)?.name || "Arabic"} ▾
             </button>
             {showLang && (
-              <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, padding: "5px 10px", color: "#ccc", cursor, overflow: "hidden", zIndex: 100, minWidth: 120 }}>
+              <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, overflow: "hidden", zIndex: 100, minWidth: 120 }}>
                 {languages.map((l) => (
                   <button key={l.code} onClick={() => changeLang(l.code)} style={{ display: "block", width: "100%", padding: "8px 14px", background: l.code === lang ? "#10b981" : "transparent", color: l.code === lang ? "white" : "#ccc", border: "none", cursor: "pointer", textAlign: "left", fontSize: 13 }}>
                     {l.name}
