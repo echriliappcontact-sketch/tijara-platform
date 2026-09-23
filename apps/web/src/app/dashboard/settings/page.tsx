@@ -98,7 +98,7 @@ export default function SettingsPage() {
       </div>
 
       {msg && <div style={{ background: "#0d2818", border: "1px solid #10b981", borderRadius: 8, padding: 12, marginBottom: 16, color: "#10b981" }}>{msg}</div>}
-      {err && <div style={{ background: "#2d1215", border: "1px solid #dc2626",171" }}>{err}</div>}
+      {err && <div style={{ background: "#2d1215", border: "1px solid #dc2626", borderRadius: 8, padding: 12, marginBottom: 16, color: "#f87171" }}>{err}</div>}
 
       {tab === "profile" && (
         <div className="card">

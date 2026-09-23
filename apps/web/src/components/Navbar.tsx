@@ -44,7 +44,7 @@ export default function Navbar() {
             </>
           )}
           <div style={{ position: "relative" }}>
-            <button onClick={() => setShowLang(!showLang)} style={{ background: "#1a1a1a", border: "1px solid #33: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
+            <button onClick={() => setShowLang(!showLang)} style={{ background: "#1a1a1a", border: "1px solid #333", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
               {languages.find(l => l.code === lang)?.name || "Arabic"} ▾
             </button>
             {showLang && (
