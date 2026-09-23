@@ -45,22 +45,17 @@ export default function DashboardPage() {
             {user?.firstName?.charAt(0)?.toUpperCase() || "?"}
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{user?.firstName} {user?.lastName}</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{user?.firstName} {" "} {user?.lastName}</div>
             <div style={{ fontSize: 12, color: "#888" }}>{user?.email}</div>
           </div>
         </div>
       </div>
 
-      {/* Subscription Banner */}
       {subscription && (
-        <div style={{
-          background: isActive ? "#0d2818" : isTrial ? "#1a1a0a" : "#2d1215",
-          border: "1px solid " + (isActive ? "#10b981" : isTrial ? "#eab308" : "#dc2626"),
-          borderRadius: 12, padding: 24, marginBottom: 24
-        }}>
+        <div style={{ background: isActive ? "#0d2818" : isTrial ? "#1a1a0a" : "#2d1215", border: "1px solid " + (isActive ? "#10b981" : isTrial ? "#eab308" : "#dc2626"), borderRadius: 12, padding: 24, marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <div style={{ fontSize: 13, color: "#888", marginBottom: 4 }}>{t("dash.subStatus")}</div>
+              <div style={{ fontSize: 13, color: "#888", marginBottom: 4 }}>Subscription Status</div>
               <div style={{ fontSize: 24, fontWeight: 700, color: isActive ? "#10b981" : isTrial ? "#eab308" : "#dc2626" }}>
                 {isActive ? "Active" : isTrial ? "Free Trial" : "Expired"}
               </div>
@@ -80,19 +75,17 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Store Info */}
       {store && (
         <div className="card" style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>{t("dash.storeInfo")}</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Store Info</h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-            <div><span style={{ color: "#888" }}>{t("dash.name")}: </span><strong>{store.name}</strong></div>
-            <div><span style={{ color: "#888" }}>{t("dash.slug")}: </span>{store.slug}</div>
-            <div><span style={{ color: "#888" }}>{t("dash.status")}: </span><span style={{ color: isActive ? "#10b981" : "#eab308", fontWeight: 600 }}>{isActive ? "Active" : store.status}</span></div>
+            <div><span style={{ color: "#888" }}>Name: </span><strong>{store.name}</strong></div>
+            <div><span style={{ color: "#888" }}>Slug: </span>{store.slug}</div>
+            <div><span style={{ color: "#888" }}>Status: </span><span style={{ color: isActive ? "#10b981" : "#eab308", fontWeight: 600 }}>{isActive ? "Active" : store.status}</span></div>
           </div>
         </div>
       )}
 
-      {/* Quick Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16, marginBottom: 24 }}>
         <div className="card" style={{ textAlign: "center" }}>
           <div style={{ fontSize: 32, fontWeight: 800, color: "#10b981" }}>{stats.products}</div>
@@ -104,22 +97,21 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Navigation Grid */}
       {isActive ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           <Link href="/dashboard/products" className="card" style={{ textDecoration: "none", color: "inherit" }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#10b981", marginBottom: 8 }}>01</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{t("dash.products")}</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Products</h3>
             <p style={{ color: "#888", fontSize: 13 }}>Add, edit and manage your products</p>
           </Link>
           <Link href="/dashboard/orders" className="card" style={{ textDecoration: "none", color: "inherit" }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#3b82f6", marginBottom: 8 }}>02</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{t("dash.orders")}</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Orders</h3>
             <p style={{ color: "#888", fontSize: 13 }}>View and manage customer orders</p>
           </Link>
           <Link href="/dashboard/subscription" className="card" style={{ textDecoration: "none", color: "inherit" }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#f59e0b", marginBottom: 8 }}>03</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{t("dash.subscription")}</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Subscription</h3>
             <p style={{ color: "#888", fontSize: 13 }}>Manage your plan and payments</p>
           </Link>
           <Link href="/dashboard/settings" className="card" style={{ textDecoration: "none", color: "inherit" }}>
@@ -137,10 +129,10 @@ export default function DashboardPage() {
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Analytics</h3>
             <p style={{ color: "#888", fontSize: 13 }}>Sales reports and insights</p>
           </Link>
-        ="card" style={{ textAlign: "center", padding: 40 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Activate</div>
+        </div>
       ) : (
-        <div className Your Store</h2>
+        <div className="card" style={{ textAlign: "center", padding: 40 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Activate Your Store</h2>
           <p style={{ color: "#888", marginBottom: 20 }}>Subscribe to a plan to unlock all features</p>
           <Link href="/dashboard/subscription" style={{ background: "#10b981", color: "white", padding: "12px 32px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 16 }}>
             Choose a Plan
