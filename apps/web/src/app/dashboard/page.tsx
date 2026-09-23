@@ -8,22 +8,33 @@ import { t, isRTL } from "@/lib/i18n";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [store, setStore] = useState<any>(null);
+  const [store, setStoreState] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [dir, setDir] = useState("rtl");
   const [user, setUser] = useState<any>(null);
+  const [stats, setStats] = useState({ products: 0, orders: 0 });
 
   useEffect(() => {
     setDir(isRTL() ? "rtl" : "ltr");
     if (!isLoggedIn()) { router.push("/login"); return; }
     const s = getStore();
     const u = getUser();
-    setStore(s);
+    setStoreState(s);
     setUser(u);
     if (s?.id) {
-      api.get("/subscriptions/my-subscription/" + s.id).then((r) => setSubscription(r.data)).catch(() => {});
+      api.get("/subscriptions/my-subscription/" + s.id).then((r) => {
+        setSubscription(r.data);
+        if (r.data.storeStatus === "ACTIVE" || r.data.status === "ACTIVE") {
+          api.get("/products?storeId=" + s.id).then((rp) => setStats((prev) => ({ ...prev, products: rp.data.length || 0 }))).catch(() => {});
+          api.get("/orders?storeId=" + s.id).then((ro) => setStats((prev) => ({ ...prev, orders: ro.data.length || 0 }))).catch(() => {});
+        }
+      }).catch(() => {});
     }
   }, [router]);
+
+  const isActive = subscription?.status === "ACTIVE" || subscription?.storeStatus === "ACTIVE";
+  const isTrial = subscription?.status === "TRIAL";
+  const isExpired = !isActive && !isTrial;
 
   return (
     <div dir={dir} style={{ padding: "30px 24px", maxWidth: 1000, margin: "0 auto" }}>
@@ -40,64 +51,102 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Subscription Banner */}
       {subscription && (
         <div style={{
-          background: subscription.status === "ACTIVE" ? "#0d2818" : subscription.status === "TRIAL" ? "#1a1a0a" : "#2d1215",
-          border: "1px solid " + (subscription.status === "ACTIVE" ? "#10b981" : subscription.status === "TRIAL" ? "#eab308" : "#dc2626"),
-          borderRadius: 12, padding: 20, marginBottom: 24
+          background: isActive ? "#0d2818" : isTrial ? "#1a1a0a" : "#2d1215",
+          border: "1px solid " + (isActive ? "#10b981" : isTrial ? "#eab308" : "#dc2626"),
+          borderRadius: 12, padding: 24, marginBottom: 24
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <div style={{ fontSize: 14, color: "#888", marginBottom: 4 }}>{t("dash.subStatus")}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: subscription.status === "ACTIVE" ? "#10b981" : subscription.status === "TRIAL" ? "#eab308" : "#dc2626" }}>
-                {subscription.status === "ACTIVE" ? t("dash.active") : subscription.status === "TRIAL" ? t("dash.trial") : t("dash.expired")}
+              <div style={{ fontSize: 13, color: "#888", marginBottom: 4 }}>{t("dash.subStatus")}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: isActive ? "#10b981" : isTrial ? "#eab308" : "#dc2626" }}>
+                {isActive ? "Active" : isTrial ? "Free Trial" : "Expired"}
               </div>
-              {subscription.daysLeft > 0 && <div style={{ color: "#888", fontSize: 13, marginTop: 4 }}>{subscription.daysLeft} {t("dash.daysLeft")}</div>}
+              {subscription.plan && (
+                <div style={{ color: "#aaa", marginTop: 4, fontSize: 14 }}>
+                  Plan: <strong>{subscription.plan.name}</strong> - {subscription.plan.maxProducts || "Unlimited"} Products - {subscription.plan.maxOrders || "Unlimited"} Orders
+                </div>
+              )}
+              {subscription.daysLeft > 0 && <div style={{ color: "#888", fontSize: 13, marginTop: 4 }}>{subscription.daysLeft} days remaining</div>}
             </div>
-            {subscription.status !== "ACTIVE" && (
-              <Link href="/dashboard/subscription" style={{ background: "#10b981", color: "white", padding: "8px 20px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 14 }}>
-                {t("dash.upgrade")}
+            {!isActive && (
+              <Link href="/dashboard/subscription" style={{ background: "#10b981", color: "white", padding: "10px 24px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 14 }}>
+                {isTrial ? "Upgrade Now" : "Renew Subscription"}
               </Link>
             )}
           </div>
         </div>
       )}
 
+      {/* Store Info */}
       {store && (
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>{t("dash.storeInfo")}</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <div><span style={{ color: "#888" }}>{t("dash.name")}: </span><strong>{store.name}</strong></div>
             <div><span style={{ color: "#888" }}>{t("dash.slug")}: </span>{store.slug}</div>
-            <div><span style={{ color: "#888" }}>{t("dash.status")}: </span><span style={{ color: store.status === "ACTIVE" ? "#10b981" : "#eab308" }}>{store.status}</span></div>
+            <div><span style={{ color: "#888" }}>{t("dash.status")}: </span><span style={{ color: isActive ? "#10b981" : "#eab308", fontWeight: 600 }}>{isActive ? "Active" : store.status}</span></div>
           </div>
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
-        {[
-          { icon: "01", title: t("dash.products"), desc: t("dash.productsDesc"), href: "/dashboard/products" },
-          { icon: "02", title: t("dash.orders"), desc: t("dash.ordersDesc"), href: "/dashboard/orders" },
-          { icon: "03", title: t("dash.subscription"), desc: t("dash.subscriptionDesc"), href: "/dashboard/subscription" },
-        ].map((item, i) => (
-          <Link key={i} href={item.href} className="card" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#10b981", marginBottom: 8 }}>{item.icon}</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{item.title}</h3>
-            <p style={{ color: "#888", fontSize: 13 }}>{item.desc}</p>
-          </Link>
-        ))}
+      {/* Quick Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16, marginBottom: 24 }}>
+        <div className="card" style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 32, fontWeight: 800, color: "#10b981" }}>{stats.products}</div>
+          <div style={{ color: "#888", fontSize: 14 }}>Products</div>
+        </div>
+        <div className="card" style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 32, fontWeight: 800, color: "#3b82f6" }}>{stats.orders}</div>
+          <div style={{ color: "#888", fontSize: 14 }}>Orders</div>
+        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
-        <Link href="/dashboard/settings" className="card" style={{ textDecoration: "none", color: "inherit", border: "1px solid #333" }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Settings</h3>
-          <p style={{ color: "#888", fontSize: 13 }}>Profile, Email, Password, Store</p>
-        </Link>
-        <Link href="/dashboard/subscription" className="card" style={{ textDecoration: "none", color: "inherit", border: "1px solid #333" }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Subscription</h3>
-          <p style={{ color: "#888", fontSize: 13 }}>Manage your plan and payments</p>
-        </Link>
-      </div>
+      {/* Navigation Grid */}
+      {isActive ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+          <Link href="/dashboard/products" className="card" style={{ textDecoration: "none", color: "inherit" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#10b981", marginBottom: 8 }}>01</div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{t("dash.products")}</h3>
+            <p style={{ color: "#888", fontSize: 13 }}>Add, edit and manage your products</p>
+          </Link>
+          <Link href="/dashboard/orders" className="card" style={{ textDecoration: "none", color: "inherit" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#3b82f6", marginBottom: 8 }}>02</div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{t("dash.orders")}</h3>
+            <p style={{ color: "#888", fontSize: 13 }}>View and manage customer orders</p>
+          </Link>
+          <Link href="/dashboard/subscription" className="card" style={{ textDecoration: "none", color: "inherit" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#f59e0b", marginBottom: 8 }}>03</div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{t("dash.subscription")}</h3>
+            <p style={{ color: "#888", fontSize: 13 }}>Manage your plan and payments</p>
+          </Link>
+          <Link href="/dashboard/settings" className="card" style={{ textDecoration: "none", color: "inherit" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#8b5cf6", marginBottom: 8 }}>04</div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Settings</h3>
+            <p style={{ color: "#888", fontSize: 13 }}>Profile, Email, Password, Store</p>
+          </Link>
+          <Link href="/dashboard/customers" className="card" style={{ textDecoration: "none", color: "inherit" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#ec4899", marginBottom: 8 }}>05</div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Customers</h3>
+            <p style={{ color: "#888", fontSize: 13 }}>View your customer list</p>
+          </Link>
+          <Link href="/dashboard/analytics" className="card" style={{ textDecoration: "none", color: "inherit" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#06b6d4", marginBottom: 8 }}>06</div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Analytics</h3>
+            <p style={{ color: "#888", fontSize: 13 }}>Sales reports and insights</p>
+          </Link>
+        ="card" style={{ textAlign: "center", padding: 40 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Activate</div>
+      ) : (
+        <div className Your Store</h2>
+          <p style={{ color: "#888", marginBottom: 20 }}>Subscribe to a plan to unlock all features</p>
+          <Link href="/dashboard/subscription" style={{ background: "#10b981", color: "white", padding: "12px 32px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 16 }}>
+            Choose a Plan
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
