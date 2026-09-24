@@ -13,13 +13,24 @@ export class SubscriptionsService {
     const plan = await this.prisma.subscriptionPlan.findUnique({ where: { id: data.planId } });
     if (!plan) throw new NotFoundException("Plan not found");
     const payment = await this.prisma.subscriptionPayment.create({
-      data: { storeId, planId: data.planId, amount: plan.price, transactionRef: data.transactionRef, receiptUrl: data.receiptUrl || null, paymentMethod: data.paymentMethod || "BARIDIMOB" },
+      data: {
+        storeId,
+        planId: data.planId,
+        amount: plan.price,
+        transactionRef: data.transactionRef || "MANUAL",
+        receiptUrl: data.receiptUrl || null,
+        paymentMethod: data.paymentMethod || "BARIDIMOB",
+      },
     });
-    return { message: "Payment submitted. Waiting for admin approval.", payment: { id: payment.id, amount: payment.amount, status: payment.status, transactionRef: payment.transactionRef } };
+    return { message: "Payment submitted", payment };
   }
 
   async getMyPayments(storeId: string) {
-    return this.prisma.subscriptionPayment.findMany({ where: { storeId }, include: { plan: true }, orderBy: { createdAt: "desc" } });
+    return this.prisma.subscriptionPayment.findMany({
+      where: { storeId },
+      include: { plan: true },
+      orderBy: { createdAt: "desc" },
+    });
   }
 
   async getMySubscription(storeId: string) {
@@ -40,7 +51,6 @@ export class SubscriptionsService {
       const endDate = new Date(lastApproved.reviewedAt);
       endDate.setDate(endDate.getDate() + lastApproved.plan.duration);
       const isSubActive = endDate > now;
-
       return {
         status: isSubActive ? "ACTIVE" : "EXPIRED",
         plan: lastApproved.plan,
@@ -48,6 +58,13 @@ export class SubscriptionsService {
         endDate: endDate.toISOString(),
         daysLeft: isSubActive ? Math.ceil((endDate.getTime() - now.getTime()) / 86400000) : 0,
         storeStatus: store.status,
+        storeName: store.name,
+        storeSlug: store.slug,
+        storeUrl: "/store/" + store.slug,
+        maxProducts: lastApproved.plan.maxProducts,
+        maxOrders: lastApproved.plan.maxOrders,
+        maxStaff: lastApproved.plan.maxStaff,
+        features: lastApproved.plan.features,
       };
     }
 
@@ -58,9 +75,12 @@ export class SubscriptionsService {
         endDate: trialEndsAt.toISOString(),
         daysLeft: Math.ceil((trialEndsAt.getTime() - now.getTime()) / 86400000),
         storeStatus: store.status,
+        storeName: store.name,
+        storeSlug: store.slug,
+        storeUrl: "/store/" + store.slug,
       };
     }
 
-    return { status: "EXPIRED", plan: null, daysLeft: 0, storeStatus: store.status };
+    return { status: "EXPIRED", plan: null, daysLeft: 0, storeStatus: store.status, storeName: store.name, storeSlug: store.slug };
   }
 }

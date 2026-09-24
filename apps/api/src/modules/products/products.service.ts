@@ -7,34 +7,80 @@ export class ProductsService {
 
   async findAll(storeId?: string) {
     const where = storeId ? { storeId } : {};
-    return this.prisma.product.findMany({ where, include: { store: { select: { id: true, name: true } }, category: true, images: true }, orderBy: { createdAt: "desc" } });
+    return this.prisma.product.findMany({
+      where,
+      include: { store: { select: { id: true, name: true, slug: true } }, category: true, images: true },
+      orderBy: { createdAt: "desc" },
+    });
   }
 
   async findOne(id: string) {
-    const product = await this.prisma.product.findUnique({ where: { id }, include: { store: true, category: true, images: true, variants: true } });
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      include: { store: true, category: true, images: true, variants: true },
+    });
     if (!product) throw new NotFoundException("Product not found");
     return product;
   }
 
   async create(data: any) {
-    const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now();
-    return this.prisma.product.create({
+    const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|$)/g, "") + "-" + Date.now();
+    const product = await this.prisma.product.create({
       data: {
-        storeId: data.storeId, categoryId: data.categoryId || null, name: data.name, slug,
-        description: data.description || null, price: data.price, compareAtPrice: data.compareAtPrice || null,
-        sku: data.sku || null, stock: data.stock || 0, status: data.status || "DRAFT",
-        isFeatured: data.isFeatured || false, tags: data.tags ? JSON.stringify(data.tags) : "[]",
+        storeId: data.storeId,
+        categoryId: data.categoryId || null,
+        name: data.name,
+        slug,
+        description: data.description || null,
+        price: data.price,
+        compareAtPrice: data.compareAtPrice || null,
+        sku: data.sku || null,
+        stock: data.stock || 0,
+        status: data.status || "ACTIVE",
+        isFeatured: data.isFeatured || false,
+        tags: data.tags ? JSON.stringify(data.tags) : "[]",
       },
     });
+    if (data.images && data.images.length > 0) {
+      for (let i = 0; i < data.images.length; i++) {
+        await this.prisma.productImage.create({
+          data: { productId: product.id, url: data.images[i], sortOrder: i, isPrimary: i === 0 },
+        });
+      }
+    }
+    return this.prisma.product.findUnique({ where: { id: product.id }, include: { images: true } });
   }
 
   async update(id: string, data: any) {
     const product = await this.prisma.product.findUnique({ where: { id } });
     if (!product) throw new NotFoundException("Product not found");
-    return this.prisma.product.update({ where: { id }, data: { name: data.name, description: data.description, price: data.price, compareAtPrice: data.compareAtPrice, sku: data.sku, stock: data.stock, status: data.status, isFeatured: data.isFeatured, categoryId: data.categoryId } });
+    if (data.images && data.images.length > 0) {
+      await this.prisma.productImage.deleteMany({ where: { productId: id } });
+      for (let i = 0; i < data.images.length; i++) {
+        await this.prisma.productImage.create({
+          data: { productId: id, url: data.images[i], sortOrder: i, isPrimary: i === 0 },
+        });
+      }
+    }
+    return this.prisma.product.update({
+      where: { id },
+      data: {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        compareAtPrice: data.compareAtPrice,
+        sku: data.sku,
+        stock: data.stock,
+        status: data.status,
+        isFeatured: data.isFeatured,
+        categoryId: data.categoryId,
+      },
+      include: { images: true },
+    });
   }
 
   async delete(id: string) {
+    await this.prisma.productImage.deleteMany({ where: { productId: id } });
     await this.prisma.product.delete({ where: { id } });
     return { message: "Product deleted" };
   }

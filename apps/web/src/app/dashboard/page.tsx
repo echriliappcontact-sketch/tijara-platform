@@ -4,18 +4,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import { getStore, isLoggedIn, getUser } from "@/lib/auth";
-import { t, isRTL } from "@/lib/i18n";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [store, setStoreState] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
-  const [dir, setDir] = useState("rtl");
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState({ products: 0, orders: 0 });
 
   useEffect(() => {
-    setDir(isRTL() ? "rtl" : "ltr");
     if (!isLoggedIn()) { router.push("/login"); return; }
     const s = getStore();
     const u = getUser();
@@ -34,18 +31,17 @@ export default function DashboardPage() {
 
   const isActive = subscription?.status === "ACTIVE" || subscription?.storeStatus === "ACTIVE";
   const isTrial = subscription?.status === "TRIAL";
-  const isExpired = !isActive && !isTrial;
 
   return (
-    <div dir={dir} style={{ padding: "30px 24px", maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ padding: "30px 24px", maxWidth: 1000, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>{t("dash.title")}</h1>
+        <h1 style={{ fontSize: 28, fontWeight: 700 }}>My Store</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "white" }}>
             {user?.firstName?.charAt(0)?.toUpperCase() || "?"}
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{user?.firstName} {" "} {user?.lastName}</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{user?.firstName} {user?.lastName}</div>
             <div style={{ fontSize: 12, color: "#888" }}>{user?.email}</div>
           </div>
         </div>
@@ -61,27 +57,33 @@ export default function DashboardPage() {
               </div>
               {subscription.plan && (
                 <div style={{ color: "#aaa", marginTop: 4, fontSize: 14 }}>
-                  Plan: <strong>{subscription.plan.name}</strong> - {subscription.plan.maxProducts || "Unlimited"} Products - {subscription.plan.maxOrders || "Unlimited"} Orders
+                  Plan: <strong>{subscription.plan.name}</strong> | {subscription.plan.maxProducts || "Unlimited"} Products | {subscription.plan.maxOrders || "Unlimited"} Orders | Staff: {subscription.plan.maxStaff}
                 </div>
               )}
-              {subscription.daysLeft > 0 && <div style={{ color: "#888", fontSize: 13, marginTop: 4 }}>{subscription.daysLeft} days remaining</div>}
+              {subscription.startDate && <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>Started: {new Date(subscription.startDate).toLocaleDateString()}</div>}
+              {subscription.endDate && <div style={{ color: "#888", fontSize: 12 }}>Ends: {new Date(subscription.endDate).toLocaleDateString()} ({subscription.daysLeft} days left)</div>}
             </div>
             {!isActive && (
               <Link href="/dashboard/subscription" style={{ background: "#10b981", color: "white", padding: "10px 24px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 14 }}>
-                {isTrial ? "Upgrade Now" : "Renew Subscription"}
+                {isTrial ? "Upgrade Now" : "Renew"}
               </Link>
             )}
           </div>
         </div>
       )}
 
-      {store && (
-        <div className="card" style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Store Info</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-            <div><span style={{ color: "#888" }}>Name: </span><strong>{store.name}</strong></div>
-            <div><span style={{ color: "#888" }}>Slug: </span>{store.slug}</div>
-            <div><span style={{ color: "#888" }}>Status: </span><span style={{ color: isActive ? "#10b981" : "#eab308", fontWeight: 600 }}>{isActive ? "Active" : store.status}</span></div>
+      {store && isActive && (
+        <div className="card" style={{ marginBottom: 24, background: "#0d2818", border: "1px solid #10b981" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Your Store Link</h3>
+              <a href={"/store/" + store.slug} target="_blank" rel="noopener noreferrer" style={{ color: "#10b981", fontSize: 14 }}>
+                tijara-platform.vercel.app/store/{store.slug}
+              </a>
+            </div>
+            <a href={"/store/" + store.slug} target="_blank" rel="noopener noreferrer" style={{ background: "#10b981", color: "white", padding: "8px 16px", borderRadius: 6, textDecoration: "none", fontSize: 13, fontWeight: 600 }}>
+              View My Store
+            </a>
           </div>
         </div>
       )}
@@ -109,31 +111,31 @@ export default function DashboardPage() {
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Orders</h3>
             <p style={{ color: "#888", fontSize: 13 }}>View and manage customer orders</p>
           </Link>
-          <Link href="/dashboard/subscription" className="card" style={{ textDecoration: "none", color: "inherit" }}>
+          <Link href="/dashboard/delivery" className="card" style={{ textDecoration: "none", color: "inherit" }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#f59e0b", marginBottom: 8 }}>03</div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Delivery</h3>
+            <p style={{ color: "#888", fontSize: 13 }}>Shipping prices for 58 wilayas</p>
+          </Link>
+          <Link href="/dashboard/store" className="card" style={{ textDecoration: "none", color: "inherit" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#8b5cf6", marginBottom: 8 }}>04</div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Store Settings</h3>
+            <p style={{ color: "#888", fontSize: 13 }}>Store info, link, name, description</p>
+          </Link>
+          <Link href="/dashboard/subscription" className="card" style={{ textDecoration: "none", color: "inherit" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#ec4899", marginBottom: 8 }}>05</div>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Subscription</h3>
-            <p style={{ color: "#888", fontSize: 13 }}>Manage your plan and payments</p>
+            <p style={{ color: "#888", fontSize: 13 }}>Plan details and payment history</p>
           </Link>
           <Link href="/dashboard/settings" className="card" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#8b5cf6", marginBottom: 8 }}>04</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Settings</h3>
-            <p style={{ color: "#888", fontSize: 13 }}>Profile, Email, Password, Store</p>
-          </Link>
-          <Link href="/dashboard/customers" className="card" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#ec4899", marginBottom: 8 }}>05</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Customers</h3>
-            <p style={{ color: "#888", fontSize: 13 }}>View your customer list</p>
-          </Link>
-          <Link href="/dashboard/analytics" className="card" style={{ textDecoration: "none", color: "inherit" }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#06b6d4", marginBottom: 8 }}>06</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Analytics</h3>
-            <p style={{ color: "#888", fontSize: 13 }}>Sales reports and insights</p>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Account Settings</h3>
+            <p style={{ color: "#888", fontSize: 13 }}>Profile, email, password</p>
           </Link>
         </div>
       ) : (
         <div className="card" style={{ textAlign: "center", padding: 40 }}>
           <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Activate Your Store</h2>
-          <p style={{ color: "#888", marginBottom: 20 }}>Subscribe to a plan to unlock all features</p>
+          <p style={{ color: "#888", marginBottom: 20 }}>Subscribe to a plan to unlock all features and start selling</p>
           <Link href="/dashboard/subscription" style={{ background: "#10b981", color: "white", padding: "12px 32px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 16 }}>
             Choose a Plan
           </Link>

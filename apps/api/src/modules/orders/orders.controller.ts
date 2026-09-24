@@ -16,6 +16,9 @@ export class OrdersController {
   @Post() @ApiOperation({ summary: "Create order" })
   create(@Body() body: any) { return this.svc.create(body); }
 
+  @Post("public/:slug") @ApiOperation({ summary: "Public order from store" })
+  createPublic(@Param("slug") slug: string, @Body() body: any) { return this.svc.createPublic(slug, body); }
+
   @Put(":id/status") @ApiOperation({ summary: "Update order status" })
   updateStatus(@Param("id") id: string, @Body() body: any) { return this.svc.updateStatus(id, body.status, body.note); }
 

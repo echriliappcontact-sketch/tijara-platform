@@ -67,6 +67,7 @@ model Store {
   userRoles       UserRole[]
   payments        SubscriptionPayment[]
   coupons         Coupon[]
+  deliverySettings StoreDeliverySetting[]
   @@map("stores")
 }
 
@@ -129,7 +130,8 @@ model ProductImage {
   productId String
   url       String
   alt       String?
-  sortOrder Int     @default(0)
+  sortOrder Int
+  isPrimary Boolean  @default(false)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
@@ -230,12 +232,13 @@ model Courier {
 }
 
 model Wilaya {
-  id       String  @id @default(uuid())
-  code     String  @unique
-  name     String
-  nameAr   String
-  nameFr   String
-  isActive Boolean @default(true)
+  id                String                   @id @default(uuid())
+  code              String                   @unique
+  name              String
+  nameAr            String
+  nameFr            String
+  isActive          Boolean                  @default(true)
+  deliverySettings  StoreDeliverySetting[]
 }
 
 model Theme {
@@ -309,4 +312,20 @@ model Notification {
   data      String?
   isRead    Boolean   @default(false)
   createdAt DateTime  @default(now())
+}
+
+model StoreDeliverySetting {
+  id             String   @id @default(uuid())
+  storeId        String
+  wilayaCode     String
+  homePrice      Int      @default(0)
+  stopDeskPrice  Int      @default(0)
+  isActive       Boolean  @default(true)
+  estimatedDays  Int      @default(3)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  store          Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  wilaya         Wilaya   @relation(fields: [wilayaCode], references: [code])
+  @@unique([storeId, wilayaCode])
+  @@index([storeId])
 }
