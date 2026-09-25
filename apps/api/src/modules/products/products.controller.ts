@@ -10,6 +10,11 @@ export class ProductsController {
   @Get() @ApiOperation({ summary: "List products" })
   findAll(@Query("storeId") storeId?: string) { return this.svc.findAll(storeId); }
 
+  @Get("by-slug/:storeSlug/:productSlug") @ApiOperation({ summary: "Public product by slug" })
+  findBySlug(@Param("storeSlug") storeSlug: string, @Param("productSlug") productSlug: string) {
+    return this.svc.findBySlug(storeSlug, productSlug);
+  }
+
   @Get(":id") @ApiOperation({ summary: "Get product" })
   findOne(@Param("id") id: string) { return this.svc.findOne(id); }
 

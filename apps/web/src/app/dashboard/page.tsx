@@ -32,6 +32,15 @@ export default function DashboardPage() {
   const isActive = subscription?.status === "ACTIVE" || subscription?.storeStatus === "ACTIVE";
   const isTrial = subscription?.status === "TRIAL";
 
+  const navItems = [
+    { href: "/dashboard/products", num: "01", title: "Products", desc: "Add, edit and manage your products", color: "#10b981" },
+    { href: "/dashboard/orders", num: "02", title: "Orders", desc: "View and manage customer orders", color: "#3b82f6" },
+    { href: "/dashboard/delivery", num: "03", title: "Delivery & Shipping", desc: "58 Wilayas delivery prices", color: "#f59e0b" },
+    { href: "/dashboard/store", num: "04", title: "Store Settings", desc: "Store link, name, appearance", color: "#8b5cf6" },
+    { href: "/dashboard/subscription", num: "05", title: "My Subscription", desc: "Plan, payments, renewal", color: "#ec4899" },
+    { href: "/dashboard/settings", num: "06", title: "Account Settings", desc: "Profile, email, password", color: "#06b6d4" },
+  ];
+
   return (
     <div style={{ padding: "30px 24px", maxWidth: 1000, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -57,11 +66,10 @@ export default function DashboardPage() {
               </div>
               {subscription.plan && (
                 <div style={{ color: "#aaa", marginTop: 4, fontSize: 14 }}>
-                  Plan: <strong>{subscription.plan.name}</strong> | {subscription.plan.maxProducts || "Unlimited"} Products | {subscription.plan.maxOrders || "Unlimited"} Orders | Staff: {subscription.plan.maxStaff}
+                  Plan: <strong>{subscription.plan.name}</strong> | {subscription.plan.maxProducts || "Unlimited"} Products | {subscription.plan.maxOrders || "Unlimited"} Orders
                 </div>
               )}
-              {subscription.startDate && <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>Started: {new Date(subscription.startDate).toLocaleDateString()}</div>}
-              {subscription.endDate && <div style={{ color: "#888", fontSize: 12 }}>Ends: {new Date(subscription.endDate).toLocaleDateString()} ({subscription.daysLeft} days left)</div>}
+              {subscription.endDate && <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>Ends: {new Date(subscription.endDate).toLocaleDateString()} ({subscription.daysLeft} days left)</div>}
             </div>
             {!isActive && (
               <Link href="/dashboard/subscription" style={{ background: "#10b981", color: "white", padding: "10px 24px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 14 }}>
@@ -101,36 +109,13 @@ export default function DashboardPage() {
 
       {isActive ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-          <Link href="/dashboard/products" className="card" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#10b981", marginBottom: 8 }}>01</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Products</h3>
-            <p style={{ color: "#888", fontSize: 13 }}>Add, edit and manage your products</p>
-          </Link>
-          <Link href="/dashboard/orders" className="card" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#3b82f6", marginBottom: 8 }}>02</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Orders</h3>
-            <p style={{ color: "#888", fontSize: 13 }}>View and manage customer orders</p>
-          </Link>
-          <Link href="/dashboard/delivery" className="card" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#f59e0b", marginBottom: 8 }}>03</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Delivery</h3>
-            <p style={{ color: "#888", fontSize: 13 }}>Shipping prices for 58 wilayas</p>
-          </Link>
-          <Link href="/dashboard/store" className="card" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#8b5cf6", marginBottom: 8 }}>04</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Store Settings</h3>
-            <p style={{ color: "#888", fontSize: 13 }}>Store info, link, name, description</p>
-          </Link>
-          <Link href="/dashboard/subscription" className="card" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#ec4899", marginBottom: 8 }}>05</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Subscription</h3>
-            <p style={{ color: "#888", fontSize: 13 }}>Plan details and payment history</p>
-          </Link>
-          <Link href="/dashboard/settings" className="card" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#06b6d4", marginBottom: 8 }}>06</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Account Settings</h3>
-            <p style={{ color: "#888", fontSize: 13 }}>Profile, email, password</p>
-          </Link>
+          {navItems.map((item) => (
+            <Link key={item.href} href={item.href} className="card" style={{ textDecoration: "none", color: "inherit" }}>
+              <div style={{ fontSize: 28, fontWeight: 800, color: item.color, marginBottom: 8 }}>{item.num}</div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{item.title}</h3>
+              <p style={{ color: "#888", fontSize: 13 }}>{item.desc}</p>
+            </Link>
+          ))}
         </div>
       ) : (
         <div className="card" style={{ textAlign: "center", padding: 40 }}>

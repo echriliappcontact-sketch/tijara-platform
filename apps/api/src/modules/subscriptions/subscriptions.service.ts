@@ -22,7 +22,7 @@ export class SubscriptionsService {
         paymentMethod: data.paymentMethod || "BARIDIMOB",
       },
     });
-    return { message: "Payment submitted", payment };
+    return { message: "Payment submitted. Waiting for admin approval.", payment: { id: payment.id, amount: payment.amount, status: payment.status, transactionRef: payment.transactionRef } };
   }
 
   async getMyPayments(storeId: string) {
@@ -36,7 +36,6 @@ export class SubscriptionsService {
   async getMySubscription(storeId: string) {
     const store = await this.prisma.store.findUnique({ where: { id: storeId } });
     if (!store) throw new NotFoundException("Store not found");
-
     const now = new Date();
     const trialEndsAt = store.trialEndsAt;
     const isTrialActive = store.status === "TRIAL" && trialEndsAt && trialEndsAt > now;
@@ -81,6 +80,6 @@ export class SubscriptionsService {
       };
     }
 
-    return { status: "EXPIRED", plan: null, daysLeft: 0, storeStatus: store.status, storeName: store.name, storeSlug: store.slug };
+    return { status: "EXPIRED", plan: null, daysLeft: 0, storeStatus: store.status, storeName: store.name, storeSlug: store.slug, storeUrl: "/store/" + store.slug };
   }
 }

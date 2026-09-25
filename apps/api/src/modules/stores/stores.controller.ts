@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Delete, Param, Body, Post } from "@nestjs/common";
+import { Controller, Get, Put, Delete, Param, Body } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { StoresService } from "./stores.service";
 
@@ -27,10 +27,8 @@ export class StoresController {
     return this.svc.updateDeliverySetting(id, wilayaCode, body);
   }
 
-  @Post(":id/delivery/bulk") @ApiOperation({ summary: "Bulk update delivery" })
-  bulkDelivery(@Param("id") id: string, @Body() body: any) {
-    return this.svc.bulkUpdateDelivery(id, body.settings);
-  }
+  @Put(":id/settings") @ApiOperation({ summary: "Update store settings" })
+  updateSettings(@Param("id") id: string, @Body() body: any) { return this.svc.updateSettings(id, body); }
 
   @Put(":id") @ApiOperation({ summary: "Update store" })
   update(@Param("id") id: string, @Body() body: any) { return this.svc.update(id, body); }

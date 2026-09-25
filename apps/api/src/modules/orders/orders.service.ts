@@ -9,7 +9,7 @@ export class OrdersService {
     const where = storeId ? { storeId } : {};
     return this.prisma.order.findMany({
       where,
-      include: { store: { select: { id: true, name: true } }, items: true },
+      include: { store: { select: { id: true, name: true, slug: true } }, items: true },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -40,23 +40,23 @@ export class OrdersService {
         commune: data.commune || null,
         address: data.address || null,
         notes: data.notes || null,
-        subtotal: data.subtotal,
-        shippingCost: data.shippingCost || 0,
-        discountAmount: data.discountAmount || 0,
-        total: data.total,
+        subtotal: Number(data.subtotal),
+        shippingCost: Number(data.shippingCost) || 0,
+        discountAmount: Number(data.discountAmount) || 0,
+        total: Number(data.total),
         paymentMethod: data.paymentMethod || "COD",
         deliveryType: data.deliveryType || "HOME",
         items: {
           create: (data.items || []).map((item: any) => ({
             productId: item.productId || null,
             productName: item.productName,
-            price: item.price,
-            quantity: item.quantity,
-            total: item.price * item.quantity,
+            price: Number(item.price),
+            quantity: Number(item.quantity),
+            total: Number(item.price) * Number(item.quantity),
             image: item.image || null,
           })),
         },
-        statusHistory: { create: { status: "PENDING", note: "Order created" } },
+        statusHistory: { create: { status: "PENDING", note: "Order created from store" } },
       },
       include: { items: true },
     });
@@ -71,7 +71,7 @@ export class OrdersService {
     const shippingCost = data.deliveryType === "STOP_DESK"
       ? (delivery?.stopDeskPrice || 0)
       : (delivery?.homePrice || 0);
-    const subtotal = (data.items || []).reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+    const subtotal = (data.items || []).reduce((sum: number, item: any) => sum + Number(item.price) * Number(item.quantity), 0);
     const total = subtotal + shippingCost;
     return this.create({
       storeId: store.id,
@@ -103,6 +103,8 @@ export class OrdersService {
   }
 
   async delete(id: string) {
+    await this.prisma.orderStatusHistory.deleteMany({ where: { orderId: id } });
+    await this.prisma.orderItem.deleteMany({ where: { orderId: id } });
     await this.prisma.order.delete({ where: { id } });
     return { message: "Order deleted" };
   }

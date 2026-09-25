@@ -1,38 +1,31 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import * as express from "express";
+import * as path from "path";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: [
-      "http://localhost:3001",
-      "http://localhost:3000",
-      "https://tijara-platform.vercel.app",
-      "https://tijara-platform-echriliappcontact.vercel.app",
-      /.vercel.app$/,
-    ],
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+    origin: "*",
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
   });
 
-  app.setGlobalPrefix("api/v1");
+  // Serve uploaded files
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   const config = new DocumentBuilder()
     .setTitle("Tijara API")
-    .setDescription("Algerian E-Commerce Platform API")
+    .setDescription("E-commerce platform API")
     .setVersion("1.0")
-    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("api/v1/docs", app, document);
+  SwaggerModule.setup("api/docs", app, document);
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
-  console.log("API: http://localhost:" + port + "/api/v1");
-  console.log("Docs: http://localhost:" + port + "/api/v1/docs");
+  app.setGlobalPrefix("api/v1", { exclude: ["uploads", "api/docs"] });
+
+  await app.listen(process.env.PORT || 3000);
 }
-
 bootstrap();
