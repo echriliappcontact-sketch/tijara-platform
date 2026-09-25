@@ -165,7 +165,7 @@ export default function SubscriptionPage() {
         <div className="card" style={{ border: "1px solid #10b981" }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Payment - {selectedPlan.name}</h2>
           <div style={{ background: "#1a1a1a", borderRadius: 8, padding: 16, marginBottom: 20 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: "#eab308">Payment Information</h3>
+            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: "#eab308"}}>Payment Information</h3>
             <div style={{ fontSize: 13, lineHeight: 2, color: "#aaa" }}>
               <div>Method: <strong>BaridiMob (Poste Algérienne)</strong></div>
               <div>Account Number: <strong>00799999 0012345678</strong></div>
