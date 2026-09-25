@@ -7,23 +7,56 @@ export class UploadService {
   private uploadsDir = path.join(process.cwd(), "uploads");
 
   constructor() {
-    if (!fs.existsSync(this.uploadsDir)) {
-      fs.mkdirSync(this.uploadsDir, { recursive: true });
+    try {
+      if (!fs.existsSync(this.uploadsDir)) {
+        fs.mkdirSync(this.uploadsDir, { recursive: true });
+      }
+    } catch (e) {
+      console.error("Could not create uploads dir:", e);
     }
   }
 
   async uploadImage(base64Data: string, folder: string = "general"): Promise<string> {
-    if (!base64Data) throw new BadRequestException("No image data");
+    if (!base64Data) {
+      throw new BadRequestException("No image data provided");
+    }
+
+    // Handle data URI format
     const matches = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);
-    if (!matches) throw new BadRequestException("Invalid image format");
+    if (!matches) {
+      throw new BadRequestException("Invalid image format. Must be base64 data URI.");
+    }
+
     const ext = matches[1];
     const buffer = Buffer.from(matches[2], "base64");
-    if (buffer.length > 10 * 1024 * 1024) throw new BadRequestException("Image too large (max 10MB)");
-    const fileName = Date.now() + "-" + Math.random().toString(36).substring(2) + "." + ext;
+
+    if (buffer.length === 0) {
+      throw new BadRequestException("Empty image data");
+    }
+
+    if (buffer.length > 20 * 1024 * 1024) {
+      throw new BadRequestException("Image too large (max 20MB)");
+    }
+
+    const fileName = Date.now() + "-" + Math.random().toString(36).substring(2, 10) + "." + ext;
     const dir = path.join(this.uploadsDir, folder);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    try {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    } catch (e) {
+      throw new BadRequestException("Could not create upload directory");
+    }
+
     const filePath = path.join(dir, fileName);
-    fs.writeFileSync(filePath, buffer);
+
+    try {
+      fs.writeFileSync(filePath, buffer);
+    } catch (e) {
+      throw new BadRequestException("Failed to save image");
+    }
+
     return "/uploads/" + folder + "/" + fileName;
   }
 
@@ -37,9 +70,13 @@ export class UploadService {
   }
 
   async deleteImage(url: string): Promise<void> {
-    const filePath = path.join(process.cwd(), url.replace(/^\//, ""));
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    try {
+      const filePath = path.join(process.cwd(), url.replace(/^\//, ""));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (e) {
+      // ignore
     }
   }
 }

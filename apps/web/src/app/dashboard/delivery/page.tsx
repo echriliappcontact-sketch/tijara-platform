@@ -9,6 +9,7 @@ export default function DeliveryPage() {
   const [settings, setSettings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
   const store = getStore();
 
   const allWilayas = [
@@ -43,55 +44,79 @@ export default function DeliveryPage() {
     try {
       const res = await api.get("/stores/" + store?.id + "/delivery");
       setSettings(res.data);
-    } catch (e) {}
+    } catch (e: any) {
+      setErr("Failed to load delivery settings");
+    }
   };
 
-  const updateSetting = async (wilayaCode: string, field: string, value: number) => {
-    try {
-      await api.put("/stores/" + store?.id + "/delivery/" + wilayaCode, { [field]: value });
-      loadSettings();
-    } catch (e) {}
+  const updateLocal = (wilayaCode: string, field: string, value: any) => {
+    setSettings(prev => {
+      const existing = prev.find(s => s.wilayaCode === wilayaCode);
+      if (existing) {
+        return prev.map(s => s.wilayaCode === wilayaCode ? { ...s, [field]: value } : s);
+      } else {
+        return [...prev, { wilayaCode, homePrice: 0, stopDeskPrice: 0, isActive: false, estimatedDays: 3, [field]: value }];
+      }
+    });
+  };
+
+  const getSetting = (code: string) => {
+    return settings.find(s => s.wilayaCode === code) || { homePrice: 0, stopDeskPrice: 0, isActive: false, estimatedDays: 3 };
   };
 
   const saveAll = async () => {
-    setLoading(true); setMsg("");
+    setLoading(true);
+    setMsg("");
+    setErr("");
     try {
-      const bulk = allWilayas.map((w) => {
-        const existing = settings.find((s) => s.wilayaCode === w.code);
-        return {
-          wilayaCode: w.code,
-          homePrice: existing?.homePrice || 0,
-          stopDeskPrice: existing?.stopDeskPrice || 0,
-          isActive: existing?.isActive ?? false,
-          estimatedDays: existing?.estimatedDays || 3,
-        };
-      });
-      await api.post("/stores/" + store?.id + "/delivery/bulk", { settings: bulk });
-      setMsg("Delivery settings saved!");
+      for (const w of allWilayas) {
+        const s = getSetting(w.code);
+        if (s.homePrice > 0 || s.stopDeskPrice > 0 || s.isActive) {
+          await api.put("/stores/" + store?.id + "/delivery/" + w.code, {
+            homePrice: Number(s.homePrice) || 0,
+            stopDeskPrice: Number(s.stopDeskPrice) || 0,
+            isActive: Boolean(s.isActive),
+            estimatedDays: Number(s.estimatedDays) || 3,
+          });
+        }
+      }
+      setMsg("All delivery settings saved successfully!");
       loadSettings();
-    } catch (e: any) { setMsg("Failed to save"); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      setErr("Failed to save: " + (e.response?.data?.message || "Unknown error"));
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const getSetting = (code: string) => settings.find((s) => s.wilayaCode === code) || { homePrice: 0, stopDeskPrice: 0, isActive: false, estimatedDays: 3 };
 
   return (
     <div style={{ padding: "30px 24px", maxWidth: 1000, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>Delivery Settings</h1>
-        <button onClick={saveAll} className="btn-primary" disabled={loading}>{loading ? "Saving..." : "Save All"}</button>
+        <h1 style={{ fontSize: 28, fontWeight: 700 }}>Delivery & Shipping</h1>
+        <button onClick={saveAll} className="btn-primary" disabled={loading} style={{ padding: "12px 28px", fontSize: 15 }}>
+          {loading ? "Saving..." : "Save All Settings"}
+        </button>
       </div>
-      {msg && <div style={{ background: msg.includes("saved") ? "#0d2818" : "#2d1215", border: "1px solid " + (msg.includes("saved") ? "#10b981" : "#dc2626"), borderRadius: 8, padding: 12, marginBottom: 16, color: msg.includes("saved") ? "#10b981" : "#f87171" }}>{msg}</div>}
-      <p style={{ color: "#888", marginBottom: 16, fontSize: 13 }}>Configure delivery prices for each wilaya. Customers will see these prices when ordering from your store.</p>
+
+      {msg && <div style={{ background: "#0d2818", border: "1px solid #10b981", borderRadius: 8, padding: 12, marginBottom: 16, color: "#10b981" }}>{msg}</div>}
+      {err && <div style={{ background: "#2d1215", border: "1px solid #dc2626", borderRadius: 8, padding: 12, marginBottom: 16, color: "#f87171" }}>{err}</div>}
+
+      <p style={{ color: "#888", marginBottom: 16, fontSize: 13 }}>
+        Set delivery prices for each wilaya. Enable the wilayas where you offer delivery and set home / stop desk prices.
+      </p>
+
       <div className="card" style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead><tr style={{ borderBottom: "1px solid #333" }}>
-            <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Code</th>
-            <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Wilaya</th>
-            <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Active</th>
-            <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Home Price (DZD)</th>
-            <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Stop Desk (DZD)</th>
-          </tr></thead>
+          <thead>
+            <tr style={{ borderBottom: "1px solid #333" }}>
+              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Code</th>
+              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Wilaya</th>
+              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Enabled</th>
+              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Home Price (DZD)</th>
+              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Stop Desk (DZD)</th>
+              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Days</th>
+            </tr>
+          </thead>
           <tbody>
             {allWilayas.map((w) => {
               const s = getSetting(w.code);
@@ -100,13 +125,39 @@ export default function DeliveryPage() {
                   <td style={{ padding: "8px 10px", fontSize: 13 }}>{w.code}</td>
                   <td style={{ padding: "8px 10px", fontSize: 13 }}>{w.name}</td>
                   <td style={{ padding: "8px 10px" }}>
-                    <input type="checkbox" checked={s.isActive} onChange={(e) => updateSetting(w.code, "isActive", e.target.checked ? 1 : 0)} />
+                    <input
+                      type="checkbox"
+                      checked={s.isActive}
+                      onChange={(e) => updateLocal(w.code, "isActive", e.target.checked)}
+                      style={{ width: 18, height: 18, cursor: "pointer" }}
+                    />
                   </td>
                   <td style={{ padding: "8px 10px" }}>
-                    <input className="input" type="number" value={s.homePrice} onChange={(e) => updateSetting(w.code, "homePrice", Number(e.target.value))} style={{ width: 100 }} />
+                    <input
+                      className="input"
+                      type="number"
+                      value={s.homePrice}
+                      onChange={(e) => updateLocal(w.code, "homePrice", Number(e.target.value))}
+                      style={{ width: 100, padding: "6px 8px" }}
+                    />
                   </td>
                   <td style={{ padding: "8px 10px" }}>
-                    <input className="input" type="number" value={s.stopDeskPrice} onChange={(e) => updateSetting(w.code, "stopDeskPrice", Number(e.target.value))} style={{ width: 100 }} />
+                    <input
+                      className="input"
+                      type="number"
+                      value={s.stopDeskPrice}
+                      onChange={(e) => updateLocal(w.code, "stopDeskPrice", Number(e.target.value))}
+                      style={{ width: 100, padding: "6px 8px" }}
+                    />
+                  </td>
+                  <td style={{ padding: "8px 10px" }}>
+                    <input
+                      className="input"
+                      type="number"
+                      value={s.estimatedDays}
+                      onChange={(e) => updateLocal(w.code, "estimatedDays", Number(e.target.value))}
+                      style={{ width: 60, padding: "6px 8px" }}
+                    />
                   </td>
                 </tr>
               );
