@@ -17,6 +17,7 @@ export default function SubscriptionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [loaded, setLoaded] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const store = getStore();
 
@@ -28,12 +29,19 @@ export default function SubscriptionPage() {
   const loadData = async () => {
     try {
       const plansRes = await api.get("/subscriptions/plans");
-      setPlans(plansRes.data);
+      setPlans(plansRes.data || []);
+    } catch (e) {
+      setErr("Failed to load plans");
+    }
+    try {
       const subRes = await api.get("/subscriptions/my-subscription/" + store?.id);
       setSubscription(subRes.data);
-      const payRes = await api.get("/subscriptions/my-payments/" + store?.id);
-      setPayments(payRes.data);
     } catch (e) {}
+    try {
+      const payRes = await api.get("/subscriptions/my-payments/" + store?.id);
+      setPayments(payRes.data || []);
+    } catch (e) {}
+    setLoaded(true);
   };
 
   const handleReceiptUpload = async (e: any) => {
@@ -41,21 +49,21 @@ export default function SubscriptionPage() {
     if (!file) return;
     setUploading(true);
     setErr("");
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const res = await api.post("/upload/image", { image: reader.result, folder: "receipts" });
-        setReceiptUrl(res.data.url);
-        setMsg("Receipt uploaded!");
-        setTimeout(() => setMsg(""), 3000);
-      } catch (e: any) {
-        setErr("Upload failed: " + (e.response?.data?.message || "Unknown error"));
-      } finally {
-        setUploading(false);
-      }
-    };
-    reader.onerror = () => { setErr("Failed to read file"); setUploading(false); };
-    reader.readAsDataURL(file);
+    try {
+      const reader = new FileReader();
+      const result = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await api.post("/upload/image", { image: result, folder: "receipts" });
+      setReceiptUrl(res.data.url);
+      setMsg("Receipt uploaded!");
+    } catch (e: any) {
+      setErr("Upload failed: " + (e.response?.data?.message || e.message || "Unknown"));
+    } finally {
+      setUploading(false);
+    }
   };
 
   const submitPayment = async (e: any) => {
@@ -79,7 +87,7 @@ export default function SubscriptionPage() {
       setSelectedPlan(null);
       loadData();
     } catch (e: any) {
-      setErr(e.response?.data?.message || "Failed");
+      setErr(e.response?.data?.message || "Failed to submit");
     } finally {
       setSubmitting(false);
     }
@@ -88,6 +96,10 @@ export default function SubscriptionPage() {
   const isActive = subscription?.status === "ACTIVE";
   const isTrial = subscription?.status === "TRIAL";
 
+  if (!loaded) {
+    return <div style={{ padding: 60, textAlign: "center", color: "#888" }}>Loading...</div>;
+  }
+
   return (
     <div style={{ padding: "30px 24px", maxWidth: 900, margin: "0 auto" }}>
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 24 }}>My Subscription</h1>
@@ -95,39 +107,71 @@ export default function SubscriptionPage() {
       {msg && <div style={{ background: "#0d2818", border: "1px solid #10b981", borderRadius: 8, padding: 12, marginBottom: 16, color: "#10b981" }}>{msg}</div>}
       {err && <div style={{ background: "#2d1215", border: "1px solid #dc2626", borderRadius: 8, padding: 12, marginBottom: 16, color: "#f87171" }}>{err}</div>}
 
-      {step === "current" && subscription && (
-        <div className="card" style={{ marginBottom: 24, background: isActive ? "#0d2818" : isTrial ? "#1a1a0a" : "#2d1215", border: "1px solid " + (isActive ? "#10b981" : isTrial ? "#eab308" : "#dc2626") }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Current Plan</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <div>
-              <div style={{ fontSize: 13, color: "#888" }}>Status</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: isActive ? "#10b981" : isTrial ? "#eab308" : "#dc2626" }}>
-                {isActive ? "Active" : isTrial ? "Free Trial" : "Expired"}
-              </div>
-            </div>
-            {subscription.plan && (
+      {step === "current" && (
+        <div>
+          <div className="card" style={{ marginBottom: 24, background: isActive ? "#0d2818" : isTrial ? "#1a1a0a" : "#2d1215", border: "1px solid " + (isActive ? "#10b981" : isTrial ? "#eab308" : "#dc2626") }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Current Status</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
-                <div style={{ fontSize: 13, color: "#888" }}>Plan</div>
-                <div style={{ fontSize: 18, fontWeight: 600 }}>{subscription.plan.name} - {subscription.plan.price?.toLocaleString()} DZD</div>
+                <div style={{ fontSize: 13, color: "#888" }}>Status</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: isActive ? "#10b981" : isTrial ? "#eab308" : "#dc2626" }}>
+                  {isActive ? "Active" : isTrial ? "Free Trial" : "Expired"}
+                </div>
               </div>
-            )}
-            <div>
-              <div style={{ fontSize: 13, color: "#888" }}>Start</div>
-              <div>{subscription.startDate ? new Date(subscription.startDate).toLocaleDateString() : "-"}</div>
+              {subscription?.plan && (
+                <div>
+                  <div style={{ fontSize: 13, color: "#888" }}>Plan</div>
+                  <div style={{ fontSize: 18, fontWeight: 600 }}>{subscription.plan.name} - {subscription.plan.price?.toLocaleString()} DZD</div>
+                </div>
+              )}
+              {subscription?.startDate && (
+                <div>
+                  <div style={{ fontSize: 13, color: "#888" }}>Start</div>
+                  <div>{new Date(subscription.startDate).toLocaleDateString()}</div>
+                </div>
+              )}
+              {subscription?.endDate && (
+                <div>
+                  <div style={{ fontSize: 13, color: "#888" }}>End</div>
+                  <div>{new Date(subscription.endDate).toLocaleDateString()} ({subscription.daysLeft} days left)</div>
+                </div>
+              )}
             </div>
-            <div>
-              <div style={{ fontSize: 13, color: "#888" }}>End</div>
-              <div>{subscription.endDate ? new Date(subscription.endDate).toLocaleDateString() : "-"}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 13, color: "#888" }}>Days Left</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#10b981" }}>{subscription.daysLeft || 0} days</div>
-            </div>
-          </div>
-          {!isActive && (
-            <button onClick={() => setStep("plans")} style={{ marginTop: 20, background: "#10b981", color: "white", padding: "12px 28px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 15 }}>
-              {isTrial ? "Upgrade Plan" : "Renew Subscription"}
+            <button onClick={() => { setStep("plans"); setErr(""); setMsg(""); }} style={{ marginTop: 20, background: "#10b981", color: "white", padding: "12px 28px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 15 }}>
+              {isActive ? "Upgrade Plan" : isTrial ? "Subscribe Now" : "Renew Subscription"}
             </button>
+          </div>
+
+          {payments.length > 0 && (
+            <div className="card">
+              <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Payment History</h2>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr style={{ borderBottom: "1px solid #333" }}>
+                  <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Date</th>
+                  <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Plan</th>
+                  <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Amount</th>
+                  <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Transaction</th>
+                  <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Receipt</th>
+                  <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Status</th>
+                </tr></thead>
+                <tbody>
+                  {payments.map((pay: any) => (
+                    <tr key={pay.id} style={{ borderBottom: "1px solid #1a1a1a" }}>
+                      <td style={{ padding: "10px", fontSize: 13 }}>{new Date(pay.createdAt).toLocaleDateString()}</td>
+                      <td style={{ padding: "10px", fontSize: 13 }}>{pay.plan?.name}</td>
+                      <td style={{ padding: "10px", fontSize: 13 }}>{pay.amount?.toLocaleString()} DZD</td>
+                      <td style={{ padding: "10px", fontSize: 13, fontFamily: "monospace" }}>{pay.transactionRef}</td>
+                      <td style={{ padding: "10px" }}>
+                        {pay.receiptUrl ? <img src={pay.receiptUrl} alt="R" style={{ width: 40, height: 40, borderRadius: 4, objectFit: "cover" }} /> : "-"}
+                      </td>
+                      <td style={{ padding: "10px" }}>
+                        <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: pay.status === "APPROVED" ? "#0d2818" : pay.status === "REJECTED" ? "#2d1215" : "#1a1a0a", color: pay.status === "APPROVED" ? "#10b981" : pay.status === "REJECTED" ? "#dc2626" : "#eab308" }}>{pay.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
@@ -140,7 +184,7 @@ export default function SubscriptionPage() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
             {plans.map((plan: any) => (
-              <div key={plan.id} className="card" style={{ border: plan.isPopular ? "2px solid #10b981" : "1px solid #333", cursor: "pointer" }}
+              <div key={plan.id} className="card" style={{ border: plan.isPopular ? "2px solid #10b981" : "1px solid #333", cursor: "pointer", textAlign: "center" }}
                 onClick={() => { setSelectedPlan(plan); setStep("payment"); setErr(""); setMsg(""); }}>
                 {plan.isPopular && <div style={{ background: "#10b981", color: "white", padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 600, display: "inline-block", marginBottom: 8 }}>Popular</div>}
                 <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{plan.name}</h3>
@@ -152,7 +196,7 @@ export default function SubscriptionPage() {
                   <div>{plan.duration} days</div>
                 </div>
                 <button type="button" style={{ marginTop: 16, width: "100%", padding: "10px", borderRadius: 6, border: "none", background: "#10b981", color: "white", cursor: "pointer", fontWeight: 600 }}>
-                  Select Plan
+                  Select This Plan
                 </button>
               </div>
             ))}
@@ -162,7 +206,7 @@ export default function SubscriptionPage() {
 
       {step === "payment" && selectedPlan && (
         <div className="card" style={{ border: "1px solid #10b981" }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Payment for {selectedPlan.name} Plan</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Payment - {selectedPlan.name} Plan</h2>
           <div style={{ background: "#1a1a1a", borderRadius: 8, padding: 16, marginBottom: 20 }}>
             <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: "#eab308" }}>Payment Information</h3>
             <div style={{ fontSize: 13, lineHeight: 2, color: "#aaa" }}>
@@ -175,7 +219,7 @@ export default function SubscriptionPage() {
           <form onSubmit={submitPayment}>
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", fontSize: 13, color: "#aaa", marginBottom: 4 }}>Transaction Number</label>
-              <input className="input" value={transactionRef} onChange={(e) => setTransactionRef(e.target.value)} placeholder="e.g. 1234567890" required />
+              <input className="input" value={transactionRef} onChange={(e: any) => setTransactionRef(e.target.value)} placeholder="e.g. 1234567890" required />
             </div>
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", fontSize: 13, color: "#aaa", marginBottom: 8 }}>Upload Payment Receipt</label>
@@ -204,40 +248,8 @@ export default function SubscriptionPage() {
         <div className="card" style={{ textAlign: "center", padding: 40, border: "1px solid #eab308" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>&#x23F3;</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, color: "#eab308" }}>Payment Submitted!</h2>
-          <p style={{ color: "#888", marginBottom: 20 }}>Your payment is being reviewed by our team. You will be notified once it is approved.</p>
-          <button onClick={() => { setStep("current"); }} style={{ background: "#10b981", color: "white", padding: "10px 24px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600 }}>View Subscription</button>
-        </div>
-      )}
-
-      {step === "current" && payments.length > 0 && (
-        <div className="card">
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Payment History</h2>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr style={{ borderBottom: "1px solid #333" }}>
-              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Date</th>
-              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Plan</th>
-              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Amount</th>
-              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Transaction</th>
-              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Receipt</th>
-              <th style={{ padding: "10px", textAlign: "left", color: "#888", fontSize: 12 }}>Status</th>
-            </tr></thead>
-            <tbody>
-              {payments.map((pay: any) => (
-                <tr key={pay.id} style={{ borderBottom: "1px solid #1a1a1a" }}>
-                  <td style={{ padding: "10px", fontSize: 13 }}>{new Date(pay.createdAt).toLocaleDateString()}</td>
-                  <td style={{ padding: "10px", fontSize: 13 }}>{pay.plan?.name}</td>
-                  <td style={{ padding: "10px", fontSize: 13 }}>{pay.amount?.toLocaleString()} DZD</td>
-                  <td style={{ padding: "10px", fontSize: 13, fontFamily: "monospace" }}>{pay.transactionRef}</td>
-                  <td style={{ padding: "10px" }}>
-                    {pay.receiptUrl ? <a href={pay.receiptUrl} target="_blank" rel="noopener noreferrer"><img src={pay.receiptUrl} alt="Receipt" style={{ width: 40, height: 40, borderRadius: 4, objectFit: "cover" }} /></a> : "-"}
-                  </td>
-                  <td style={{ padding: "10px" }}>
-                    <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: pay.status === "APPROVED" ? "#0d2818" : pay.status === "REJECTED" ? "#2d1215" : "#1a1a0a", color: pay.status === "APPROVED" ? "#10b981" : pay.status === "REJECTED" ? "#dc2626" : "#eab308" }}>{pay.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <p style={{ color: "#888", marginBottom: 20 }}>Your payment is being reviewed. You will be notified once approved.</p>
+          <button onClick={() => setStep("current")} style={{ background: "#10b981", color: "white", padding: "10px 24px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600 }}>View Status</button>
         </div>
       )}
     </div>
