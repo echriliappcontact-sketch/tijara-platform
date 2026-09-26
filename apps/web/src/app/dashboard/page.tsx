@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { getStore, isLoggedIn, getUser } from "@/lib/auth";
+import { getStore, isLoggedIn, getUser, setStore } from "@/lib/auth";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -14,27 +14,41 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isLoggedIn()) { router.push("/login"); return; }
-    const s = getStore();
     const u = getUser();
-    setStoreState(s);
     setUser(u);
-    if (s?.id) {
-      api.get("/subscriptions/my-subscription/" + s.id).then((r) => {
-        setSubscription(r.data);
-        if (r.data.storeStatus === "ACTIVE" || r.data.status === "ACTIVE") {
-          api.get("/products?storeId=" + s.id).then((rp) => setStats((prev) => ({ ...prev, products: rp.data.length || 0 }))).catch(() => {});
-          api.get("/orders?storeId=" + s.id).then((ro) => setStats((prev) => ({ ...prev, orders: ro.data.length || 0 }))).catch(() => {});
+    let s = getStore();
+    setStoreState(s);
+
+    if (!s && u?.id) {
+      api.get("/stores/by-owner/" + u.id).then((r) => {
+        if (r.data) {
+          setStore({ id: r.data.id, name: r.data.name, slug: r.data.slug });
+          s = { id: r.data.id, name: r.data.name, slug: r.data.slug };
+          setStoreState(s);
+          loadSubscription(s.id);
         }
       }).catch(() => {});
+    } else if (s?.id) {
+      loadSubscription(s.id);
     }
   }, [router]);
+
+  const loadSubscription = (storeId: string) => {
+    api.get("/subscriptions/my-subscription/" + storeId).then((r) => {
+      setSubscription(r.data);
+      if (r.data.storeStatus === "ACTIVE" || r.data.status === "ACTIVE") {
+        api.get("/products?storeId=" + storeId).then((rp) => setStats((prev) => ({ ...prev, products: rp.data.length || 0 }))).catch(() => {});
+        api.get("/orders?storeId=" + storeId).then((ro) => setStats((prev) => ({ ...prev, orders: ro.data.length || 0 }))).catch(() => {});
+      }
+    }).catch(() => {});
+  };
 
   const isActive = subscription?.status === "ACTIVE" || subscription?.storeStatus === "ACTIVE";
   const isTrial = subscription?.status === "TRIAL";
 
   const navItems = [
-    { href: "/dashboard/products", num: "01", title: "Products", desc: "Add, edit and manage your products", color: "#10b981" },
-    { href: "/dashboard/orders", num: "02", title: "Orders", desc: "View and manage customer orders", color: "#3b82f6" },
+    { href: "/dashboard/products", num: "01", title: "Products", desc: "Add, edit and manage products", color: "#10b981" },
+    { href: "/dashboard/orders", num: "02", title: "Orders", desc: "View and manage orders", color: "#3b82f6" },
     { href: "/dashboard/delivery", num: "03", title: "Delivery & Shipping", desc: "58 Wilayas delivery prices", color: "#f59e0b" },
     { href: "/dashboard/store", num: "04", title: "Store Settings", desc: "Store link, name, appearance", color: "#8b5cf6" },
     { href: "/dashboard/subscription", num: "05", title: "My Subscription", desc: "Plan, payments, renewal", color: "#ec4899" },
@@ -60,7 +74,7 @@ export default function DashboardPage() {
         <div style={{ background: isActive ? "#0d2818" : isTrial ? "#1a1a0a" : "#2d1215", border: "1px solid " + (isActive ? "#10b981" : isTrial ? "#eab308" : "#dc2626"), borderRadius: 12, padding: 24, marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <div style={{ fontSize: 13, color: "#888", marginBottom: 4 }}>Subscription Status</div>
+              <div style={{ fontSize: 13, color: "#888", marginBottom: 4 }}>Subscription</div>
               <div style={{ fontSize: 24, fontWeight: 700, color: isActive ? "#10b981" : isTrial ? "#eab308" : "#dc2626" }}>
                 {isActive ? "Active" : isTrial ? "Free Trial" : "Expired"}
               </div>
@@ -69,7 +83,7 @@ export default function DashboardPage() {
                   Plan: <strong>{subscription.plan.name}</strong> | {subscription.plan.maxProducts || "Unlimited"} Products | {subscription.plan.maxOrders || "Unlimited"} Orders
                 </div>
               )}
-              {subscription.endDate && <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>Ends: {new Date(subscription.endDate).toLocaleDateString()} ({subscription.daysLeft} days left)</div>}
+              {subscription.endDate && <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>Ends: {new Date(subscription.endDate).toLocaleDateString()} ({subscription.daysLeft} days)</div>}
             </div>
             {!isActive && (
               <Link href="/dashboard/subscription" style={{ background: "#10b981", color: "white", padding: "10px 24px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 14 }}>
@@ -120,7 +134,7 @@ export default function DashboardPage() {
       ) : (
         <div className="card" style={{ textAlign: "center", padding: 40 }}>
           <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Activate Your Store</h2>
-          <p style={{ color: "#888", marginBottom: 20 }}>Subscribe to a plan to unlock all features and start selling</p>
+          <p style={{ color: "#888", marginBottom: 20 }}>Subscribe to unlock all features</p>
           <Link href="/dashboard/subscription" style={{ background: "#10b981", color: "white", padding: "12px 32px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 16 }}>
             Choose a Plan
           </Link>
