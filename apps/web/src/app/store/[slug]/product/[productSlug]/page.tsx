@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import api from "@/lib/api";
 
 export default function PublicProductPage() {
   const params = useParams();
-  const router = useRouter();
   const storeSlug = params.slug as string;
   const productSlug = params.productSlug as string;
   const [product, setProduct] = useState<any>(null);
@@ -50,81 +49,73 @@ export default function PublicProductPage() {
       setProduct(r.data);
       setStore(r.data.store);
       if (r.data.store?.id) {
-        api.get("/stores/" + r.data.store.id + "/delivery").then((dr) => {
-          setDeliverySettings(dr.data);
-        }).catch(() => {});
+        api.get("/stores/" + r.data.store.id + "/delivery").then((dr) => setDeliverySettings(dr.data)).catch(() => {});
       }
       setLoading(false);
-    }).catch(() => {
-      setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, [storeSlug, productSlug]);
 
   useEffect(() => {
     const delivery = deliverySettings.find((d: any) => d.wilayaCode === orderForm.wilayaCode);
     if (delivery) {
       setShippingCost(orderForm.deliveryType === "STOP_DESK" ? (delivery.stopDeskPrice || 0) : (delivery.homePrice || 0));
-    } else {
-      setShippingCost(0);
-    }
+    } else { setShippingCost(0); }
   }, [orderForm.wilayaCode, orderForm.deliveryType, deliverySettings]);
 
-  const placeOrder = async (e: React.FormEvent) => {
+  const placeOrder = async (e: any) => {
     e.preventDefault();
     setOrdering(true); setOrderMsg(""); setOrderErr("");
     try {
       await api.post("/orders/public/" + storeSlug, {
         ...orderForm,
-        items: [{
-          productId: product.id,
-          productName: product.name,
-          price: product.price,
-          quantity: qty,
-          image: product.images?.[0]?.url || null,
-        }],
+        items: [{ productId: product.id, productName: product.name, price: product.price, quantity: qty, image: product.images?.[0]?.url || null }],
       });
-      setOrderMsg("Order placed successfully! The store will contact you soon.");
+      setOrderMsg("Order placed successfully! We will contact you soon.");
       setShowOrder(false);
-    } catch (e: any) {
-      setOrderErr(e.response?.data?.message || "Failed to place order");
-    } finally {
-      setOrdering(false);
-    }
+    } catch (e: any) { setOrderErr(e.response?.data?.message || "Failed to place order"); }
+    finally { setOrdering(false); }
   };
 
-  const total = (product?.price || 0) * qty + shippingCost;
+  if (loading) return <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#fff", color: "#666", fontSize: 18 }}>Loading...</div>;
+  if (!product) return <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#fff", color: "#dc2626", fontSize: 18 }}>Product not found</div>;
 
-  if (loading) return <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh", color: "#888" }}>Loading...</div>;
-  if (!product) return <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh", color: "#dc2626" }}>Product not found</div>;
+  const primaryColor = store?.settings?.primaryColor || "#10b981";
+  const backgroundColor = store?.settings?.backgroundColor || "#ffffff";
+  const textColor = store?.settings?.textColor || "#1a1a1a";
+  const total = (product.price || 0) * qty + shippingCost;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a" }}>
-      <div style={{ background: "#111", borderBottom: "1px solid #222", padding: "16px 24px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <button onClick={() => router.push("/store/" + storeSlug)} style={{ background: "transparent", border: "none", color: "#10b981", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+    <div style={{ minHeight: "100vh", background: backgroundColor, color: textColor, fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif" }}>
+      {/* Store Header */}
+      <header style={{ background: primaryColor, color: "white", padding: "16px 24px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <a href={"/store/" + storeSlug} style={{ background: "rgba(255,255,255,0.2)", color: "white", padding: "8px 16px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 14 }}>
             {"<"} Back to {store?.name || "Store"}
-          </button>
-          <div style={{ color: "#888", fontSize: 13 }}>{store?.name}</div>
+          </a>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {store?.logo && <img src={store.logo} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover" }} />}
+            <div style={{ fontSize: 18, fontWeight: 700 }}>{store?.name}</div>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {orderMsg && <div style={{ maxWidth: 1000, margin: "16px auto 0", padding: "0 24px" }}><div style={{ background: "#0d2818", border: "1px solid #10b981", borderRadius: 8, padding: 12, color: "#10b981" }}>{orderMsg}</div></div>}
+      {orderMsg && <div style={{ maxWidth: 1100, margin: "16px auto 0", padding: "0 24px" }}><div style={{ background: "#e8f5e9", border: "1px solid #10b981", borderRadius: 8, padding: 14, color: "#10b981", fontWeight: 600 }}>{orderMsg}</div></div>}
 
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "30px 24px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "30px 24px" }}>
         <div style={{ display: "flex", gap: 30, flexWrap: "wrap" }}>
           {/* Images */}
           <div style={{ flex: 1, minWidth: 300 }}>
-            <div style={{ background: "#1a1a1a", borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
+            <div style={{ background: "#f5f5f5", borderRadius: 16, overflow: "hidden", marginBottom: 12 }}>
               {product.images?.[selectedImage]?.url ? (
-                <img src={product.images[selectedImage].url} alt={product.name} style={{ width: "100%", height: 400, objectFit: "cover" }} />
+                <img src={product.images[selectedImage].url} alt={product.name} style={{ width: "100%", height: 450, objectFit: "cover" }} />
               ) : (
-                <div style={{ height: 400, display: "flex", alignItems: "center", justifyContent: "center", color: "#555" }}>No Image</div>
+                <div style={{ height: 450, display: "flex", alignItems: "center", justifyContent: "center", color: "#ccc", fontSize: 64 }}>&#128247;</div>
               )}
             </div>
             {product.images && product.images.length > 1 && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {product.images.map((img: any, i: number) => (
-                  <div key={i} onClick={() => setSelectedImage(i)} style={{ width: 70, height: 70, borderRadius: 8, overflow: "hidden", cursor: "pointer", border: selectedImage === i ? "2px solid #10b981" : "1px solid #333" }}>
+                  <div key={i} onClick={() => setSelectedImage(i)} style={{ width: 75, height: 75, borderRadius: 10, overflow: "hidden", cursor: "pointer", border: selectedImage === i ? "3px solid " + primaryColor : "1px solid #ddd" }}>
                     <img src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   </div>
                 ))}
@@ -134,89 +125,94 @@ export default function PublicProductPage() {
 
           {/* Details */}
           <div style={{ flex: 1, minWidth: 300 }}>
-            <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>{product.name}</h1>
-            <div style={{ fontSize: 32, fontWeight: 800, color: "#10b981", marginBottom: 8 }}>
-              {product.price?.toLocaleString()} DZD
-              {product.compareAtPrice && (
-                <span style={{ fontSize: 18, color: "#dc2626", textDecoration: "line-through", marginLeft: 12 }}>{product.compareAtPrice?.toLocaleString()} DZD</span>
-              )}
+            <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12, color: textColor }}>{product.name}</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <span style={{ fontSize: 36, fontWeight: 800, color: primaryColor }}>{product.price?.toLocaleString()} DZD</span>
+              {product.compareAtPrice && <span style={{ fontSize: 20, color: "#dc2626", textDecoration: "line-through" }}>{product.compareAtPrice?.toLocaleString()} DZD</span>}
             </div>
-            {product.description && (
-              <p style={{ color: "#aaa", fontSize: 14, lineHeight: 1.8, marginBottom: 20 }}>{product.description}</p>
-            )}
-            {product.stock !== undefined && product.stock > 0 && (
-              <div style={{ color: "#10b981", fontSize: 13, marginBottom: 16 }}>{product.stock} in stock</div>
-            )}
+            {product.description && <p style={{ color: "#666", fontSize: 15, lineHeight: 1.8, marginBottom: 20 }}>{product.description}</p>}
+            {product.stock > 0 && <div style={{ color: "#10b981", fontSize: 14, fontWeight: 600, marginBottom: 20 }}>{product.stock} in stock</div>}
 
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-              <span style={{ color: "#888", fontSize: 13 }}>Quantity:</span>
-              <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: 36, height: 36, borderRadius: 6, border: "1px solid #333", background: "transparent", color: "#ccc", cursor: "pointer", fontSize: 18 }}>-</button>
-              <span style={{ fontSize: 18, fontWeight: 600, minWidth: 30, textAlign: "center" }}>{qty}</span>
-              <button onClick={() => setQty(qty + 1)} style={{ width: 36, height: 36, borderRadius: 6, border: "1px solid #333", background: "transparent", color: "#ccc", cursor: "pointer", fontSize: 18 }}>+</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+              <span style={{ color: "#888", fontSize: 15, fontWeight: 600 }}>Quantity:</span>
+              <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: 40, height: 40, borderRadius: 8, border: "2px solid #ddd", background: "white", color: "#333", cursor: "pointer", fontSize: 20 }}>-</button>
+              <span style={{ fontSize: 22, fontWeight: 700, minWidth: 40, textAlign: "center" }}>{qty}</span>
+              <button onClick={() => setQty(qty + 1)} style={{ width: 40, height: 40, borderRadius: 8, border: "2px solid #ddd", background: "white", color: "#333", cursor: "pointer", fontSize: 20 }}>+</button>
             </div>
 
-            <button onClick={() => setShowOrder(true)} style={{ width: "100%", background: "#10b981", color: "white", padding: "16px", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 18, fontWeight: 700, marginBottom: 12 }}>
+            <button onClick={() => setShowOrder(true)} style={{ width: "100%", background: primaryColor, color: "white", padding: "18px", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 20, fontWeight: 800, marginBottom: 12 }}>
               Order Now - {((product.price || 0) * qty).toLocaleString()} DZD
             </button>
-            <div style={{ color: "#888", fontSize: 12, textAlign: "center" }}>Cash on Delivery Available</div>
+            <div style={{ color: "#999", fontSize: 13, textAlign: "center" }}>Cash on Delivery Available</div>
           </div>
         </div>
       </div>
 
+      {/* Footer */}
+      <footer style={{ background: primaryColor, color: "white", padding: "24px", marginTop: 40 }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>{store?.name}</div>
+          <div style={{ display: "flex", gap: 16 }}>
+            {store?.phone && <a href={"tel:" + store.phone} style={{ color: "white", textDecoration: "none", opacity: 0.9 }}>{store.phone}</a>}
+            {store?.whatsapp && <a href={"https://wa.me/" + store.whatsapp.replace(/[^0-9]/g, "")} target="_blank" rel="noopener noreferrer" style={{ color: "white", textDecoration: "none", opacity: 0.9 }}>WhatsApp</a>}
+          </div>
+        </div>
+      </footer>
+
       {/* Order Modal */}
       {showOrder && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000, padding: 20 }}>
-          <div style={{ background: "#111", borderRadius: 12, border: "1px solid #333", padding: 30, maxWidth: 500, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Complete Your Order</h2>
-            {orderErr && <div style={{ background: "#2d1215", border: "1px solid #dc2626", borderRadius: 8, padding: 10, marginBottom: 12, color: "#f87171", fontSize: 13 }}>{orderErr}</div>}
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000, padding: 20 }}>
+          <div style={{ background: "white", borderRadius: 16, padding: 30, maxWidth: 520, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
+            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 20, color: textColor }}>Complete Your Order</h2>
+            {orderErr && <div style={{ background: "#fee2e2", border: "1px solid #dc2626", borderRadius: 8, padding: 10, marginBottom: 12, color: "#dc2626", fontSize: 13 }}>{orderErr}</div>}
             <form onSubmit={placeOrder}>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: "block", fontSize: 13, color: "#aaa", marginBottom: 4 }}>Full Name *</label>
-                <input className="input" value={orderForm.customerName} onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })} required />
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 4, fontWeight: 600 }}>Full Name *</label>
+                <input style={{ width: "100%", padding: "12px 16px", borderRadius: 8, border: "2px solid #e5e7eb", fontSize: 15, outline: "none" }} value={orderForm.customerName} onChange={(e: any) => setOrderForm({ ...orderForm, customerName: e.target.value })} required />
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: "block", fontSize: 13, color: "#aaa", marginBottom: 4 }}>Phone *</label>
-                <input className="input" value={orderForm.customerPhone} onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })} required />
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 4, fontWeight: 600 }}>Phone *</label>
+                <input style={{ width: "100%", padding: "12px 16px", borderRadius: 8, border: "2px solid #e5e7eb", fontSize: 15, outline: "none" }} value={orderForm.customerPhone} onChange={(e: any) => setOrderForm({ ...orderForm, customerPhone: e.target.value })} required />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, color: "#aaa", marginBottom: 4 }}>Wilaya *</label>
-                  <select className="input" value={orderForm.wilayaCode} onChange={(e) => setOrderForm({ ...orderForm, wilayaCode: e.target.value })}>
+                  <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 4, fontWeight: 600 }}>Wilaya *</label>
+                  <select style={{ width: "100%", padding: "12px", borderRadius: 8, border: "2px solid #e5e7eb", fontSize: 14, background: "white" }} value={orderForm.wilayaCode} onChange={(e: any) => setOrderForm({ ...orderForm, wilayaCode: e.target.value })}>
                     {wilayas.map((w) => <option key={w.code} value={w.code}>{w.code} - {w.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, color: "#aaa", marginBottom: 4 }}>Delivery Type</label>
-                  <select className="input" value={orderForm.deliveryType} onChange={(e) => setOrderForm({ ...orderForm, deliveryType: e.target.value })}>
+                  <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 4, fontWeight: 600 }}>Delivery</label>
+                  <select style={{ width: "100%", padding: "12px", borderRadius: 8, border: "2px solid #e5e7eb", fontSize: 14, background: "white" }} value={orderForm.deliveryType} onChange={(e: any) => setOrderForm({ ...orderForm, deliveryType: e.target.value })}>
                     <option value="HOME">Home Delivery</option>
                     <option value="STOP_DESK">Stop Desk</option>
                   </select>
                 </div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: "block", fontSize: 13, color: "#aaa", marginBottom: 4 }}>Address</label>
-                <input className="input" value={orderForm.address} onChange={(e) => setOrderForm({ ...orderForm, address: e.target.value })} />
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 4, fontWeight: 600 }}>Address</label>
+                <input style={{ width: "100%", padding: "12px 16px", borderRadius: 8, border: "2px solid #e5e7eb", fontSize: 15, outline: "none" }} value={orderForm.address} onChange={(e: any) => setOrderForm({ ...orderForm, address: e.target.value })} />
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: "block", fontSize: 13, color: "#aaa", marginBottom: 4 }}>Notes</label>
-                <input className="input" value={orderForm.notes} onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })} placeholder="Optional" />
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 4, fontWeight: 600 }}>Notes</label>
+                <input style={{ width: "100%", padding: "12px 16px", borderRadius: 8, border: "2px solid #e5e7eb", fontSize: 15, outline: "none" }} value={orderForm.notes} onChange={(e: any) => setOrderForm({ ...orderForm, notes: e.target.value })} placeholder="Optional" />
               </div>
-              <div style={{ background: "#1a1a1a", borderRadius: 8, padding: 16, marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ color: "#888" }}>Subtotal ({qty} x {product.name}):</span>
-                  <span>{((product.price || 0) * qty).toLocaleString()} DZD</span>
+              <div style={{ background: "#f9fafb", borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 14 }}>
+                  <span style={{ color: "#666" }}>Subtotal ({qty} x {product.name}):</span>
+                  <span style={{ fontWeight: 600 }}>{((product.price || 0) * qty).toLocaleString()} DZD</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ color: "#888" }}>Shipping:</span>
-                  <span>{shippingCost > 0 ? shippingCost.toLocaleString() + " DZD" : "Free"}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 14 }}>
+                  <span style={{ color: "#666" }}>Shipping:</span>
+                  <span style={{ fontWeight: 600 }}>{shippingCost > 0 ? shippingCost.toLocaleString() + " DZD" : "Free"}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 18, borderTop: "1px solid #333", paddingTop: 8 }}>
-                  <span>Total:</span><span style={{ color: "#10b981" }}>{total.toLocaleString()} DZD</span>
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 18, borderTop: "2px solid #e5e7eb", paddingTop: 10 }}>
+                  <span>Total:</span><span style={{ color: primaryColor }}>{total.toLocaleString()} DZD</span>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button type="submit" disabled={ordering} style={{ flex: 1, background: "#10b981", color: "white", padding: "12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 15, fontWeight: 600 }}>{ordering ? "Placing..." : "Confirm Order"}</button>
-                <button type="button" onClick={() => setShowOrder(false)} style={{ padding: "12px 20px", borderRadius: 8, border: "1px solid #333", background: "transparent", color: "#aaa", cursor: "pointer" }}>Cancel</button>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button type="submit" disabled={ordering} style={{ flex: 1, background: primaryColor, color: "white", padding: "14px", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 16, fontWeight: 700 }}>{ordering ? "Placing..." : "Confirm Order"}</button>
+                <button type="button" onClick={() => setShowOrder(false)} style={{ padding: "14px 24px", borderRadius: 10, border: "2px solid #e5e7eb", background: "white", color: "#666", cursor: "pointer", fontSize: 15 }}>Cancel</button>
               </div>
             </form>
           </div>

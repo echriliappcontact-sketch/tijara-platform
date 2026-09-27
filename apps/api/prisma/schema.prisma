@@ -76,6 +76,10 @@ model StoreSettings {
   storeId            String  @unique
   metaTitle          String?
   metaDescription    String?
+  primaryColor       String  @default("#10b981")
+  backgroundColor    String  @default("#ffffff")
+  textColor          String  @default("#1a1a1a")
+  fontSize           String  @default("16")
   enableCod          Boolean @default(true)
   enableHomeDelivery Boolean @default(true)
   enableStopDesk     Boolean @default(true)

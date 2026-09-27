@@ -57,6 +57,10 @@ export class StoresService {
     const s: any = {};
     if (data.metaTitle !== undefined) s.metaTitle = data.metaTitle;
     if (data.metaDescription !== undefined) s.metaDescription = data.metaDescription;
+    if (data.primaryColor !== undefined) s.primaryColor = data.primaryColor;
+    if (data.backgroundColor !== undefined) s.backgroundColor = data.backgroundColor;
+    if (data.textColor !== undefined) s.textColor = data.textColor;
+    if (data.fontSize !== undefined) s.fontSize = data.fontSize;
     if (data.enableCod !== undefined) s.enableCod = data.enableCod;
     if (data.enableHomeDelivery !== undefined) s.enableHomeDelivery = data.enableHomeDelivery;
     if (data.enableStopDesk !== undefined) s.enableStopDesk = data.enableStopDesk;
